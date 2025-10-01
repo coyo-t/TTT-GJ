@@ -1,6 +1,9 @@
 plugins {
 	kotlin("jvm") version "2.2.0"
+	java
+	idea
 }
+
 
 
 group = "coyote"
@@ -10,8 +13,17 @@ repositories {
 	mavenCentral()
 }
 
+idea {
+	module {
+		isDownloadJavadoc = true
+		isDownloadSources = true
+	}
+}
+
 
 dependencies {
+
+
 	val lwjglNatives = Pair(
 		System.getProperty("os.name")!!,
 		System.getProperty("os.arch")!!

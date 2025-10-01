@@ -1,29 +1,32 @@
 package coyote
 
 
+import coyote.ren.Shaderz
+import coyote.resource.ResourceLocation
+import coyote.resource.ResourceManager
 import org.joml.Vector2i
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
-import org.lwjgl.system.MemoryStack.stackPush
+import org.lwjgl.opengl.GL45C.*
+
 
 const val INITIAL_TITLE = "MACHINE WITNESS"
 const val INITIAL_WIDE = 650
 const val INITIAL_TALL = 450
 
-fun getWindowManagerError () = stackPush().use { stack ->
-	val name = stack.mallocPointer(1)
-	val errc = glfwGetError(name)
-	name.stringASCII to errc
-}
+val RESOURCES = ResourceManager("./resources/assets/")
 
 fun main (vararg args: String)
 {
+	val TEST_SHADER = ResourceLocation.of("shader/test auto.lua")
+
 	check(glfwInit()) {
 		val (n,_) = getWindowManagerError()
 		"glfw failed to init ($n)"
 	}
 
 	val windowSize = Vector2i(INITIAL_WIDE, INITIAL_TALL)
+	val pevWindowSize = Vector2i(windowSize)
 
 	glfwDefaultWindowHints()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3)
@@ -50,14 +53,29 @@ fun main (vararg args: String)
 	glfwMakeContextCurrent(windowHandle)
 	GL.createCapabilities()
 
+	glfwSetWindowSizeCallback(windowHandle) { _, w, h ->
+		windowSize.set(w, h)
+	}
+
 	println(":)")
+
+	glEnable(GL_DEBUG_OUTPUT)
+	glDebugMessageCallback(::rendererDebugMessage, 0L)
+
+	val sh = Shaderz()
+	sh.loadShaderData(TEST_SHADER)
 
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
 	{
 		glfwPollEvents()
 
+		glViewport(0, 0, windowSize.x, windowSize.y)
+		glClearNamedFramebufferfv(0, GL_COLOR, 0, floatArrayOf(0.5f, 0.1f, 0.4f, 0.0f))
+		glClearNamedFramebufferfv(0, GL_DEPTH, 0, floatArrayOf(0.0f))
+
 		glfwSwapBuffers(windowHandle)
+		pevWindowSize.set(windowSize)
 	}
 
 	glfwTerminate()
