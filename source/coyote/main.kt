@@ -1,13 +1,15 @@
 package coyote
 
 
+import coyote.ren.CompiledShaders
 import coyote.ren.Shaderz
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
 import org.joml.Vector2i
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
-import org.lwjgl.opengl.GL45C.*
+import org.lwjgl.opengl.GL46C.*
+import java.nio.ByteBuffer
 
 
 const val INITIAL_TITLE = "MACHINE WITNESS"
@@ -15,6 +17,8 @@ const val INITIAL_WIDE = 650
 const val INITIAL_TALL = 450
 
 val RESOURCES = ResourceManager("./resources/assets/")
+val SHADERS = Shaderz()
+val PIPELINES = CompiledShaders()
 
 fun main (vararg args: String)
 {
@@ -29,7 +33,7 @@ fun main (vararg args: String)
 	val pevWindowSize = Vector2i(windowSize)
 
 	glfwDefaultWindowHints()
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3)
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
 
@@ -62,8 +66,9 @@ fun main (vararg args: String)
 	glEnable(GL_DEBUG_OUTPUT)
 	glDebugMessageCallback(::rendererDebugMessage, 0L)
 
-	val sh = Shaderz()
-	sh.loadShaderData(TEST_SHADER)
+	val pipeline = PIPELINES[TEST_SHADER]
+
+	val dummy = glCreateVertexArrays()
 
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
@@ -73,6 +78,10 @@ fun main (vararg args: String)
 		glViewport(0, 0, windowSize.x, windowSize.y)
 		glClearNamedFramebufferfv(0, GL_COLOR, 0, floatArrayOf(0.5f, 0.1f, 0.4f, 0.0f))
 		glClearNamedFramebufferfv(0, GL_DEPTH, 0, floatArrayOf(0.0f))
+
+		pipeline.bind()
+		glBindVertexArray(dummy)
+		glDrawArrays(GL_TRIANGLES, 0, 3)
 
 		glfwSwapBuffers(windowHandle)
 		pevWindowSize.set(windowSize)
