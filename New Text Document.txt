@@ -1,0 +1,2 @@
+$natv='D:\_downloads\graalvm-jdk-25_windows-x64_bin\graalvm-jdk-25+37.1\bin\native-image.cmd'
+&$natv -jar ".\TTT-GJ-v1-all.jar" "MACHINE_WITNESS"
