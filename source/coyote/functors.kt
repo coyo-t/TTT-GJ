@@ -2,6 +2,7 @@ package coyote
 
 import coyote.geom.VertexFormat
 import coyote.geom.VertexFormatBuilder
+import coyote.resource.ResourceLocation
 import org.joml.Math.clamp
 import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.glfwGetError
@@ -136,3 +137,5 @@ fun applyVertexFormat (format: VertexFormat, vaoHandle: Int)
 		)
 	}
 }
+
+

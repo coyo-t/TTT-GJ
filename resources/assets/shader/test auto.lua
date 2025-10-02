@@ -26,12 +26,15 @@ return {
 	fragment = [[
 		#version 460 core
 
+		layout(binding=0) uniform sampler2D gm_BaseImage;
+
 		layout(location=0) in vec2 v_vTexcoord;
+
 		layout(location=0) out vec4 pixel;
 
 		void main ()
 		{
-			pixel = vec4(v_vTexcoord.x, v_vTexcoord.y, 0, 1);
+			pixel = texture(gm_BaseImage, v_vTexcoord);
 		}
 	]]
 }

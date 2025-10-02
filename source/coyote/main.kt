@@ -42,6 +42,7 @@ fun main (vararg args: String)
 
 	val RESOURCES = ResourceManager(ASSETS_PATH)
 	val SHADERZ = CompiledShaders(RESOURCES)
+	val IMAGEZ = PicManager(RESOURCES)
 
 	check(glfwInit()) {
 		val (n,_) = getWindowManagerError()
@@ -96,6 +97,16 @@ fun main (vararg args: String)
 	val tess = Tesselator()
 	val submitter = RenderSubmittingTessDigester()
 
+	val testPic = IMAGEZ[ResourceLocation.of("texture/screen triangle test.kra")]
+	val testTexture = glCreateTextures(GL_TEXTURE_2D)
+	glTextureStorage2D(testTexture, 1, GL_RGBA8, testPic.wide, testPic.tall)
+	glTextureParameteri(testTexture, GL_TEXTURE_WRAP_S, GL_REPEAT)
+	glTextureParameteri(testTexture, GL_TEXTURE_WRAP_T, GL_REPEAT)
+	glTextureParameteri(testTexture, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+	glTextureParameteri(testTexture, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+	nglTextureSubImage2D(testTexture, 0, 0, 0, testPic.wide, testPic.tall, GL_RGBA, GL_UNSIGNED_BYTE, testPic.data.address())
+
+
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
 	{
@@ -106,6 +117,8 @@ fun main (vararg args: String)
 		glClearNamedFramebufferfv(0, GL_COLOR, 0, floatArrayOf(0.5f, 0.1f, 0.4f, 0.0f))
 		glClearNamedFramebufferfv(0, GL_DEPTH, 0, floatArrayOf(0.0f))
 //		glBlitNamedFramebuffer()
+
+		glBindTextureUnit(0, testTexture)
 		autoQuadShader.bind()
 		dummy.bind()
 		glDrawArrays(GL_TRIANGLES, 0, 3)
