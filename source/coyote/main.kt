@@ -1,6 +1,7 @@
 package coyote
 
 import coyote.geom.RenderSubmittingTessDigester
+import coyote.geom.SavingTessDigester
 import coyote.geom.Tesselator
 import coyote.geom.VertexFormat
 import coyote.ren.CompiledShaders
@@ -121,6 +122,52 @@ fun main (vararg args: String)
 
 	val transform = Matrix4fStack(16)
 
+	val tessSaver = SavingTessDigester()
+	val testSavedModel = with(tess) {
+		begin(TEST_VERTEX_FORMAT)
+		color(Color.RED)
+		vertex(1, 0, 0, 0,0)
+		vertex(0, 0, -1, 0,0)
+		vertex(0, 1, 0, 0,0)
+		triangle()
+		color(Color.YELLOW)
+		vertex(-1, 0, 0, 0,0)
+		vertex(0, 0, -1, 0,0)
+		vertex(0, 1, 0, 0,0)
+		triangle()
+		color(Color.BLUE)
+		vertex(-1, 0, 0, 0,0)
+		vertex(0, 0, -1, 0,0)
+		vertex(0, -1, 0, 0,0)
+		triangle()
+		color(Color.WHITE)
+		vertex(1, 0, 0, 0,0)
+		vertex(0, 0, -1, 0,0)
+		vertex(0, -1, 0, 0,0)
+		triangle()
+		color(Color.RED.darker())
+		vertex(1, 0, 0, 0,0)
+		vertex(0, 0, 1, 0,0)
+		vertex(0, 1, 0, 0,0)
+		triangle()
+		color(Color.YELLOW.darker())
+		vertex(-1, 0, 0, 0,0)
+		vertex(0, 0, 1, 0,0)
+		vertex(0, 1, 0, 0,0)
+		triangle()
+		color(Color.BLUE.darker())
+		vertex(-1, 0, 0, 0,0)
+		vertex(0, 0, 1, 0,0)
+		vertex(0, -1, 0, 0,0)
+		triangle()
+		color(Color.WHITE.darker())
+		vertex(1, 0, 0, 0,0)
+		vertex(0, 0, 1, 0,0)
+		vertex(0, -1, 0, 0,0)
+		triangle()
+		end(tessSaver)
+	}
+
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
 	{
@@ -141,67 +188,18 @@ fun main (vararg args: String)
 
 		transform.apply {
 			identity()
-//			rotateZ((cos(time * PI) * 0.1).toFloat())
 			perspective(70f, winWide.toFloat()/winTall, 0.001f, 100f)
+			rotateX((cos(time * PI) * 0.1).toFloat())
+			rotateY((time * PI / 2.0).toFloat())
 			get(matrixSegment, 0L)
 			nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
 		}
 
 		tessTestShader.bind()
-		tess.begin(TEST_VERTEX_FORMAT)
 		val uhh = glGetUniformBlockIndex(tessTestShader.vr, "MATRICES")
 		glUniformBlockBinding(tessTestShader.vr, uhh, 0)
 		glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixBuffer)
-		tess.vertexTransform.apply {
-			rotateX(sin(time*PI*0.75)*toRadians(90.0))
-			rotateY(time * toRadians(10.0))
-		}
-
-		tess.apply {
-			color(Color.RED)
-			vertex(1, 0, 0, 0,0)
-			vertex(0, 0, -1, 0,0)
-			vertex(0, 1, 0, 0,0)
-			triangle()
-			color(Color.YELLOW)
-			vertex(-1, 0, 0, 0,0)
-			vertex(0, 0, -1, 0,0)
-			vertex(0, 1, 0, 0,0)
-			triangle()
-			color(Color.BLUE)
-			vertex(-1, 0, 0, 0,0)
-			vertex(0, 0, -1, 0,0)
-			vertex(0, -1, 0, 0,0)
-			triangle()
-			color(Color.WHITE)
-			vertex(1, 0, 0, 0,0)
-			vertex(0, 0, -1, 0,0)
-			vertex(0, -1, 0, 0,0)
-			triangle()
-
-			color(Color.RED.darker())
-			vertex(1, 0, 0, 0,0)
-			vertex(0, 0, 1, 0,0)
-			vertex(0, 1, 0, 0,0)
-			triangle()
-			color(Color.YELLOW.darker())
-			vertex(-1, 0, 0, 0,0)
-			vertex(0, 0, 1, 0,0)
-			vertex(0, 1, 0, 0,0)
-			triangle()
-			color(Color.BLUE.darker())
-			vertex(-1, 0, 0, 0,0)
-			vertex(0, 0, 1, 0,0)
-			vertex(0, -1, 0, 0,0)
-			triangle()
-			color(Color.WHITE.darker())
-			vertex(1, 0, 0, 0,0)
-			vertex(0, 0, 1, 0,0)
-			vertex(0, -1, 0, 0,0)
-			triangle()
-
-			end(submitter.withMode(GL_TRIANGLES))
-		}
+		testSavedModel.submit(GL_TRIANGLES)
 
 		glfwSwapBuffers(windowHandle)
 		pevWindowSize.set(windowSize)

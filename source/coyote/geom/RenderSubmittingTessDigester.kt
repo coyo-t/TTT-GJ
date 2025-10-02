@@ -6,7 +6,7 @@ import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout
 
-class RenderSubmittingTessDigester: TesselatorDigester()
+class RenderSubmittingTessDigester: TesselatorDigester<Unit>()
 {
 	private var mode = GL_TRIANGLES
 	private val vao = glCreateVertexArrays()

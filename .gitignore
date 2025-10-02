@@ -1,6 +1,7 @@
 hs_err_pid*.log
 
 **/*.kra~
+guts/
 
 .gradle
 build/

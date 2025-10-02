@@ -191,11 +191,11 @@ class Tesselator
 		color(c.red/255.0, c.green/255.0, c.blue/255.0, c.alpha/255.0)
 	}
 
-	fun end (guts: TesselatorDigester)
+	fun <T> end (guts: TesselatorDigester<T>): T
 	{
 		checkAndChangeState(false)
 
-		guts.digest(
+		return guts.digest(
 			currentVertexFormat,
 			vertexMemory.asSlice(0L, vertexCursor),
 			logicalVertexCount,
