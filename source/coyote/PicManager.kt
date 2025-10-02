@@ -1,5 +1,6 @@
 package coyote
 
+import coyote.resource.Resource
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
 import org.lwjgl.stb.STBImage.nstbi_image_free
@@ -22,6 +23,11 @@ class PicManager(val resources: ResourceManager)
 			return picNametable.getValue(rl)
 
 		val data = requireNotNull(resources[rl])
+		return loadImage(data).also { picNametable[rl] = it }
+	}
+
+	fun loadImage (data: Resource): NativeImage
+	{
 		data.openZipFileSystem().use { zip ->
 			val maybePic = zip.getPath("mergedimage.png")
 			FileChannel.open(maybePic).use { channel ->
@@ -40,10 +46,9 @@ class PicManager(val resources: ResourceManager)
 					return NativeImage(
 						wide,
 						tall,
-						MemorySegment.ofAddress(result).reinterpret(wide*tall*4L)
+						MemorySegment.ofAddress(result).reinterpret(wide * tall * 4L)
 					).apply {
 						freeImageCallback = Consumer { nstbi_image_free(it) }
-						picNametable[rl] = this
 					}
 				}
 			}
