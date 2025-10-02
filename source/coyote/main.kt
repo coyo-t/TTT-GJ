@@ -6,6 +6,7 @@ import coyote.geom.VertexFormat
 import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
+import org.joml.Matrix4fStack
 import org.joml.Vector2i
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
@@ -13,10 +14,14 @@ import org.lwjgl.opengl.GL46C.*
 import org.lwjgl.system.Configuration
 import java.awt.Color
 import java.lang.Math.toRadians
+import java.lang.foreign.Arena
+import java.lang.foreign.MemorySegment
+import java.lang.foreign.ValueLayout.JAVA_FLOAT
 import kotlin.io.path.Path
 import kotlin.io.path.div
 import kotlin.io.path.invariantSeparatorsPathString
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sin
 
 const val INITIAL_TITLE = "MACHINE WITNESS"
@@ -93,12 +98,28 @@ fun main (vararg args: String)
 
 	val dummy = GPUVertexArray(VertexFormat.NON)
 
+	val matrixBuffer = glCreateBuffers()
+	val matrixBufferSize = ((4*4)*4L)*3
+	glNamedBufferStorage(
+		matrixBuffer,
+		matrixBufferSize,
+		GL_DYNAMIC_STORAGE_BIT,
+	)
+
+	val matrixSegment = Arena.ofAuto().allocate(matrixBufferSize)
+	matrixSegment.setAtIndex(JAVA_FLOAT, 0L, 1f)
+	matrixSegment.setAtIndex(JAVA_FLOAT, 5L, 1f)
+	matrixSegment.setAtIndex(JAVA_FLOAT, 11L, 1f)
+	matrixSegment.setAtIndex(JAVA_FLOAT, 15L, 1f)
+	val matrixNIO = matrixSegment.asByteBuffer()
+
 //	val surface = glCreateFramebuffers()
 	val tess = Tesselator()
 	val submitter = RenderSubmittingTessDigester()
 
-	val testTexture = TEXTUREZ[ResourceLocation.of("texture/not a real texture lol")]
-//	val testTexture = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
+	val testTexture = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
+
+	val transform = Matrix4fStack(16)
 
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
@@ -114,10 +135,22 @@ fun main (vararg args: String)
 		glBindTextureUnit(0, testTexture.handle)
 		autoQuadShader.bind()
 		dummy.bind()
-		glDrawArrays(GL_TRIANGLES, 0, 3)
+//		glDrawArrays(GL_TRIANGLES, 0, 3)
+
+		transform.apply {
+			identity()
+//			rotateZ((cos(time * PI) * 0.1).toFloat())
+			translate(0f, (cos(time * PI) * 0.1).toFloat(), 0f)
+
+			get(matrixSegment, 0L)
+			nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
+		}
 
 		tessTestShader.bind()
 		tess.begin(TEST_VERTEX_FORMAT)
+		val uhh = glGetUniformBlockIndex(tessTestShader.vr, "MATRICES")
+		glUniformBlockBinding(tessTestShader.vr, uhh, 0)
+		glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixBuffer)
 		tess.vertexTransform.apply {
 			translate(0.6, 0.0, 0.0)
 			rotateZ(sin(time*PI*0.75)*toRadians(22.5))

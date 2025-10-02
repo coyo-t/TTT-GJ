@@ -4,11 +4,14 @@ import coyote.geom.VertexFormat
 import coyote.geom.VertexFormatBuilder
 import coyote.resource.ResourceLocation
 import org.joml.Math.clamp
+import org.joml.Matrix4fc
 import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.glfwGetError
 import org.lwjgl.opengl.GL45C.*
 import org.lwjgl.opengl.GLDebugMessageCallback
 import org.lwjgl.system.MemoryStack.stackPush
+import java.lang.foreign.MemorySegment
+import java.lang.foreign.ValueLayout.JAVA_FLOAT
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Path
@@ -138,4 +141,22 @@ fun applyVertexFormat (format: VertexFormat, vaoHandle: Int)
 	}
 }
 
-
+fun Matrix4fc.get (into: MemorySegment, offset: Long)
+{
+	into[JAVA_FLOAT, offset] = m00()
+	into[JAVA_FLOAT, offset+(4*1L)] = m01()
+	into[JAVA_FLOAT, offset+(4*2L)] = m02()
+	into[JAVA_FLOAT, offset+(4*3L)] = m03()
+	into[JAVA_FLOAT, offset+(4*4L)] = m10()
+	into[JAVA_FLOAT, offset+(4*5L)] = m11()
+	into[JAVA_FLOAT, offset+(4*6L)] = m12()
+	into[JAVA_FLOAT, offset+(4*7L)] = m13()
+	into[JAVA_FLOAT, offset+(4*8L)] = m20()
+	into[JAVA_FLOAT, offset+(4*9L)] = m21()
+	into[JAVA_FLOAT, offset+(4*10L)] = m22()
+	into[JAVA_FLOAT, offset+(4*11L)] = m23()
+	into[JAVA_FLOAT, offset+(4*12L)] = m30()
+	into[JAVA_FLOAT, offset+(4*13L)] = m31()
+	into[JAVA_FLOAT, offset+(4*14L)] = m32()
+	into[JAVA_FLOAT, offset+(4*15L)] = m33()
+}
