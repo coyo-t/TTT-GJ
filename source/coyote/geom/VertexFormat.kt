@@ -1,14 +1,11 @@
-package coyote
+package coyote.geom
 
-class VertexFormat(
+data class VertexFormat(
 	val attributes: List<Attribute>,
 	val byUsage: Map<String, Attribute>,
 	val byteSize: Int,
 )
 {
-
-
-
 	data class Attribute (
 		val type: Int,
 		val elementCount: Int,
@@ -19,4 +16,13 @@ class VertexFormat(
 		val signed: Boolean,
 	)
 
+
+	companion object
+	{
+		val NON = VertexFormat(
+			attributes = emptyList(),
+			byUsage = emptyMap(),
+			byteSize = 0,
+		)
+	}
 }

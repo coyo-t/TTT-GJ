@@ -1,5 +1,9 @@
 package coyote
 
+import coyote.geom.VertexFormat
+import coyote.geom.VertexFormatBuilder
+import org.joml.Math.clamp
+import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.glfwGetError
 import org.lwjgl.opengl.GL45C.*
 import org.lwjgl.opengl.GLDebugMessageCallback
@@ -11,7 +15,14 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.io.path.invariantSeparatorsPathString
+import kotlin.math.floor
 
+
+fun Double.floorToInt () = floor(this).toInt()
+fun Double.floorToInt (min:Int, max:Int) = clamp(floorToInt(), min, max)
+
+fun Vector3d.set (x:Number, y:Number, z:Number): Vector3d
+	= set(x.toDouble(), y.toDouble(), z.toDouble())
 
 @OptIn(ExperimentalContracts::class)
 inline fun buildVertexFormat (cb: VertexFormatBuilder.()->Unit): VertexFormat
@@ -71,7 +82,12 @@ fun rendererDebugMessage (source:Int, type:Int, id:Int, severity:Int, mLen:Int, 
 		else -> "??? $type"
 	}
 	val sMessage = GLDebugMessageCallback.getMessage(mLen, mPtr)
-	println("$sSrc, $sType, $sSevere, $id, $sMessage")
+	val fin = "$sSrc, $sType, $sSevere, $id, $sMessage"
+	if (severity == GL_DEBUG_SEVERITY_HIGH && type == GL_DEBUG_TYPE_ERROR)
+	{
+		throw IllegalStateException(fin)
+	}
+	println(fin)
 }
 
 fun createBuffer (size:Long): ByteBuffer
@@ -100,5 +116,23 @@ fun loadSystemLibrary (s: String)
 	catch (_: UnsatisfiedLinkError)
 	{
 		System.load(s)
+	}
+}
+
+fun applyVertexFormat (format: VertexFormat, vaoHandle: Int)
+{
+	for (attribute in format.attributes)
+	{
+		val i = attribute.index
+		glEnableVertexArrayAttrib(vaoHandle, i)
+		glVertexArrayAttribBinding(vaoHandle, i, 0)
+		glVertexArrayAttribFormat(
+			vaoHandle,
+			i,
+			attribute.elementCount,
+			attribute.type,
+			attribute.normalized,
+			attribute.byteOffset,
+		)
 	}
 }

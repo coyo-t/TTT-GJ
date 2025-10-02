@@ -1,5 +1,8 @@
 package coyote
 
+import coyote.geom.SubmittingTessDigester
+import coyote.geom.Tesselator
+import coyote.geom.VertexFormat
 import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
@@ -8,9 +11,13 @@ import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL46C.*
 import org.lwjgl.system.Configuration
+import java.awt.Color
+import java.lang.Math.toRadians
 import kotlin.io.path.Path
 import kotlin.io.path.div
 import kotlin.io.path.invariantSeparatorsPathString
+import kotlin.math.PI
+import kotlin.math.sin
 
 const val INITIAL_TITLE = "MACHINE WITNESS"
 const val INITIAL_WIDE = 650
@@ -35,8 +42,6 @@ fun main (vararg args: String)
 
 	val RESOURCES = ResourceManager(ASSETS_PATH)
 	val SHADERZ = CompiledShaders(RESOURCES)
-
-	val TEST_SHADER = ResourceLocation.of("shader/test auto.lua")
 
 	check(glfwInit()) {
 		val (n,_) = getWindowManagerError()
@@ -82,25 +87,46 @@ fun main (vararg args: String)
 	glEnable(GL_DEBUG_OUTPUT)
 	glDebugMessageCallback(::rendererDebugMessage, 0L)
 
-	val pipeline = SHADERZ[TEST_SHADER]
+	val autoQuadShader = SHADERZ[ResourceLocation.of("shader/test auto.lua")]
+	val tessTestShader = SHADERZ[ResourceLocation.of("shader/test.lua")]
 
-	val dummy = glCreateVertexArrays()
+	val dummy = GPUVertexArray(VertexFormat.NON)
 
 //	val surface = glCreateFramebuffers()
-
+	val tess = Tesselator()
+	val submitter = SubmittingTessDigester()
 
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
 	{
 		glfwPollEvents()
+		val time = glfwGetTime()
 
 		glViewport(0, 0, windowSize.x, windowSize.y)
 		glClearNamedFramebufferfv(0, GL_COLOR, 0, floatArrayOf(0.5f, 0.1f, 0.4f, 0.0f))
 		glClearNamedFramebufferfv(0, GL_DEPTH, 0, floatArrayOf(0.0f))
 //		glBlitNamedFramebuffer()
-		pipeline.bind()
-		glBindVertexArray(dummy)
+		autoQuadShader.bind()
+		dummy.bind()
 		glDrawArrays(GL_TRIANGLES, 0, 3)
+
+		tessTestShader.bind()
+		tess.begin(TEST_VERTEX_FORMAT)
+		tess.vertexTransform.apply {
+			rotateZ(sin(time*PI*0.75)*toRadians(22.5))
+			scale(0.5)
+			translate(-0.5, -0.5, 0.0)
+		}
+		tess.color(Color.RED)
+		tess.vertex(0, 0, 0, 0,0)
+		tess.color(Color.YELLOW)
+		tess.vertex(1, 0, 0, 0,0)
+		tess.color(Color.BLUE)
+		tess.vertex(1, 1, 0, 0,0)
+		tess.color(Color.WHITE)
+		tess.vertex(0, 1, 0, 0,0)
+		tess.quad()
+		tess.end(submitter.withMode(GL_TRIANGLES))
 
 		glfwSwapBuffers(windowHandle)
 		pevWindowSize.set(windowSize)

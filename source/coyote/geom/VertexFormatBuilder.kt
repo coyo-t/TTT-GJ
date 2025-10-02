@@ -1,6 +1,7 @@
-package coyote
+package coyote.geom
 
-import org.lwjgl.opengl.GL46C.*
+import coyote.glTypeByteSize
+import org.lwjgl.opengl.GL11C
 
 class VertexFormatBuilder
 {
@@ -37,7 +38,7 @@ class VertexFormatBuilder
 		stride += sizeof
 	}
 
-	private fun floatn (i:Int, u:String?=null) = custom(GL_FLOAT, i, signed=true, normalized=false, u)
+	private fun floatn (i:Int, u:String?=null) = custom(GL11C.GL_FLOAT, i, signed=true, normalized=false, u)
 
 	fun float1 () = floatn(1)
 	fun float2 () = floatn(2)
@@ -47,8 +48,7 @@ class VertexFormatBuilder
 	fun location3D () = floatn(3, "location")
 	fun normal () = floatn(3, "normal")
 	fun uv (i:Int=0) = floatn(2, "uv$i")
-	fun color () = floatn(4, "color")
-	fun byteColor () = custom(GL_UNSIGNED_BYTE, 4, signed=false, normalized=true, "color")
+	fun byteColor () = custom(GL11C.GL_UNSIGNED_BYTE, 4, signed=false, normalized=true, "color")
 
 	fun build (): VertexFormat
 	{
@@ -64,9 +64,9 @@ class VertexFormatBuilder
 			)
 		}
 		return VertexFormat(
-			attributes=attrs,
-			byUsage=usages.map { (n,i) -> n to attrs[i] }.toMap(),
-			byteSize=stride,
+			attributes = attrs,
+			byUsage = usages.map { (n, i) -> n to attrs[i] }.toMap(),
+			byteSize = stride,
 		)
 	}
 

@@ -7,8 +7,8 @@ return {
 		layout(location=1) in vec2 aTexture;
 		layout(location=2) in vec4 aColor;
 
-		out vec2 vTexture;
-		out vec4 vColor;
+		layout(location=0) out vec2 vTexture;
+		layout(location=1) out vec4 vColor;
 
 		void main ()
 		{
@@ -20,8 +20,8 @@ return {
 	fragment = [[
 		#version 460 core
 
-		in vec2 vTexture;
-		in vec4 vColor;
+		layout(location=0) in vec2 vTexture;
+		layout(location=1) in vec4 vColor;
 
 		layout(location=0) out vec4 pixel;
 
