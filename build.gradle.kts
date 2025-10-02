@@ -2,12 +2,13 @@ plugins {
 	kotlin("jvm") version "2.2.0"
 	java
 	idea
+	id("com.gradleup.shadow") version "9.2.2"
+	application
 }
 
 
-
 group = "coyote"
-version = "1.0-SNAPSHOT"
+version = "v1"
 
 repositories {
 	mavenCentral()
@@ -20,10 +21,11 @@ idea {
 	}
 }
 
+application {
+	mainClass = "coyote.MainKt"
+}
 
 dependencies {
-
-
 	val lwjglNatives = Pair(
 		System.getProperty("os.name")!!,
 		System.getProperty("os.arch")!!
@@ -111,9 +113,9 @@ dependencies {
 	implementation("com.code-disaster.steamworks4j", "steamworks4j-server", "1.9.0")
 	implementation("org.joml", "joml", "1.10.8")
 
-	implementation("party.iroiro.luajava:luajava:4.0.2")
-	implementation("party.iroiro.luajava:lua54:4.0.2")
-	implementation("party.iroiro.luajava:lua54-platform:4.0.2:natives-desktop")
+//	implementation("party.iroiro.luajava:luajava:4.0.2")
+//	implementation("party.iroiro.luajava:lua54:4.0.2")
+//	implementation("party.iroiro.luajava:lua54-platform:4.0.2:natives-desktop")
 
 	implementation("org.tinylog:tinylog-api-kotlin:2.7.0")
 	implementation("org.tinylog:tinylog-impl:2.7.0")

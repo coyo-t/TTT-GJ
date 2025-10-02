@@ -6,10 +6,10 @@ import kotlin.io.path.div
 import kotlin.io.path.isRegularFile
 import kotlin.jvm.optionals.getOrNull
 
-class ResourceManager (root: String)
+class ResourceManager (root: Path)
 {
 
-	val root = Path.of(root).normalize().toAbsolutePath()
+	val root = root.normalize().toAbsolutePath()
 
 	private val nametable = mutableMapOf<ResourceLocation, Optional<Resource>>()
 

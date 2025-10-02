@@ -6,6 +6,8 @@ import org.lwjgl.opengl.GLDebugMessageCallback
 import org.lwjgl.system.MemoryStack.stackPush
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.file.Path
+import kotlin.io.path.invariantSeparatorsPathString
 
 fun getWindowManagerError () = stackPush().use { stack ->
 	val name = stack.mallocPointer(1)
@@ -52,4 +54,28 @@ fun rendererDebugMessage (source:Int, type:Int, id:Int, severity:Int, mLen:Int, 
 fun createBuffer (size:Long): ByteBuffer
 {
 	return ByteBuffer.allocateDirect(size.toInt()).order(ByteOrder.nativeOrder())
+}
+
+fun loadSystemLibrary (p: Path)
+{
+	try
+	{
+		System.loadLibrary(p.normalize().invariantSeparatorsPathString)
+	}
+	catch (_: UnsatisfiedLinkError)
+	{
+		System.load(p.normalize().toAbsolutePath().invariantSeparatorsPathString)
+	}
+}
+
+fun loadSystemLibrary (s: String)
+{
+	try
+	{
+		System.loadLibrary(s)
+	}
+	catch (_: UnsatisfiedLinkError)
+	{
+		System.load(s)
+	}
 }

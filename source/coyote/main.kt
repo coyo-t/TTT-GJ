@@ -9,19 +9,29 @@ import org.joml.Vector2i
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL46C.*
-import java.nio.ByteBuffer
+import kotlin.io.path.Path
+import kotlin.io.path.div
 
 
 const val INITIAL_TITLE = "MACHINE WITNESS"
 const val INITIAL_WIDE = 650
 const val INITIAL_TALL = 450
 
-val RESOURCES = ResourceManager("./resources/assets/")
+
+val RESOURCE_PATH = Path("./resources/").normalize().toAbsolutePath()
+val ASSETS_PATH = RESOURCE_PATH/"assets"
+val DATA_PATH = RESOURCE_PATH/"data"
+
+val RESOURCES = ResourceManager(ASSETS_PATH)
+
 val SHADERS = Shaderz()
 val PIPELINES = CompiledShaders()
 
 fun main (vararg args: String)
 {
+	val LP = DATA_PATH/"dll"
+	loadSystemLibrary(LP/"lua5464.dll")
+
 	val TEST_SHADER = ResourceLocation.of("shader/test auto.lua")
 
 	check(glfwInit()) {
