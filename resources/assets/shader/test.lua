@@ -1,5 +1,7 @@
 return {
 
+
+
 	vertex = [[
 		#version 460 core
 
@@ -37,8 +39,7 @@ return {
 
 		void main ()
 		{
-			//pixel = v_v.color;
-			pixel = vec4(1,0,0,1);
+			pixel = v_v.color;
 		}
 	]]
 }
