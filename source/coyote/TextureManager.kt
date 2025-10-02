@@ -3,6 +3,10 @@ package coyote
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
 import org.lwjgl.opengl.GL45C.*
+import java.awt.Color
+import java.awt.image.BufferedImage
+import java.lang.foreign.Arena
+import java.lang.foreign.ValueLayout.JAVA_BYTE
 
 class TextureManager(val resources: ResourceManager)
 {
@@ -11,6 +15,42 @@ class TextureManager(val resources: ResourceManager)
 
 	private val nametable = mutableMapOf<ResourceLocation, Texture>()
 
+	private val missingIMage by lazy {
+		val sz = 8
+		val pic = BufferedImage(sz, sz, BufferedImage.TYPE_INT_ARGB)
+		val f = pic.createGraphics()
+		f.color = Color.BLACK
+		f.fillRect(0, 0, sz, sz)
+		f.color = Color.MAGENTA
+		val hs = sz / 2
+		f.fillRect(0, 0, hs, hs)
+		f.fillRect(hs, hs, hs, hs)
+		f.dispose()
+		val raster = pic.getRGB(0, 0, sz, sz, null, 0, sz)
+		val rm = Arena.ofAuto().allocate(sz * sz *4L)
+		for ((i,pix) in raster.withIndex())
+		{
+			val ii = i * 4L
+			rm[JAVA_BYTE, ii] = ((pix ushr 16) and 0xFF).toByte()
+			rm[JAVA_BYTE, ii + 1] = ((pix ushr 8) and 0xFF).toByte()
+			rm[JAVA_BYTE, ii + 2] = (pix and 0xFF).toByte()
+			rm[JAVA_BYTE, ii + 3] = ((pix ushr 24) and 0xFF).toByte()
+		}
+		NativeImage(sz, sz, rm)
+	}
+	val missingTexture by lazy {
+		val w = missingIMage.wide
+		val h = missingIMage.tall
+		val t = glCreateTextures(GL_TEXTURE_2D)
+		glTextureStorage2D(t, 1, GL_RGBA8, w, h)
+		glTextureParameteri(t, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+		glTextureParameteri(t, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+		glTextureParameteri(t, GL_TEXTURE_WRAP_S, GL_REPEAT)
+		glTextureParameteri(t, GL_TEXTURE_WRAP_T, GL_REPEAT)
+		nglTextureSubImage2D(t, 0, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, missingIMage.data.address())
+		Texture(w, h, t)
+	}
+
 	operator fun get (rl: ResourceLocation, discardImageData:Boolean=false): Texture
 	{
 		if (rl in nametable)
@@ -18,7 +58,7 @@ class TextureManager(val resources: ResourceManager)
 
 		try
 		{
-			val res = resources[rl]!!
+			val res = requireNotNull(resources[rl]) { "no resource here" }
 			val pic = imageManager.loadImage(res)
 			val t = glCreateTextures(GL_TEXTURE_2D)
 			val wide = pic.wide
@@ -54,7 +94,9 @@ class TextureManager(val resources: ResourceManager)
 		}
 		catch (e: Exception)
 		{
-			TODO("missing/error texture")
+			System.err.println("image load $rl error:")
+			e.printStackTrace()
+			return missingTexture.also { nametable[rl] = it }
 		}
 	}
 

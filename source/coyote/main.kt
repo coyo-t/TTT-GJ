@@ -97,7 +97,8 @@ fun main (vararg args: String)
 	val tess = Tesselator()
 	val submitter = RenderSubmittingTessDigester()
 
-	val testTexture = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
+	val testTexture = TEXTUREZ[ResourceLocation.of("texture/not a real texture lol")]
+//	val testTexture = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
 
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
