@@ -20,6 +20,11 @@ val RESOURCE_PATH = Path("./resources/").normalize().toAbsolutePath()
 val ASSETS_PATH = RESOURCE_PATH/"assets"
 val DATA_PATH = RESOURCE_PATH/"data"
 
+val TEST_VERTEX_FORMAT = buildVertexFormat {
+	location3D()
+	uv(0)
+	byteColor()
+}
 
 fun main (vararg args: String)
 {

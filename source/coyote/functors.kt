@@ -7,7 +7,30 @@ import org.lwjgl.system.MemoryStack.stackPush
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Path
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 import kotlin.io.path.invariantSeparatorsPathString
+
+
+@OptIn(ExperimentalContracts::class)
+inline fun buildVertexFormat (cb: VertexFormatBuilder.()->Unit): VertexFormat
+{
+	contract { callsInPlace(cb, InvocationKind.EXACTLY_ONCE) }
+	return VertexFormatBuilder().apply(cb).build()
+}
+
+fun glTypeByteSize (type: Int): Long
+{
+	return when (type)
+	{
+		GL_BYTE, GL_UNSIGNED_BYTE -> 1
+		GL_SHORT, GL_UNSIGNED_SHORT -> 2
+		GL_INT, GL_UNSIGNED_INT -> 4
+		GL_FLOAT -> 4
+		else -> throw IllegalArgumentException()
+	}
+}
 
 fun getWindowManagerError () = stackPush().use { stack ->
 	val name = stack.mallocPointer(1)
