@@ -7,6 +7,7 @@ import org.joml.Vector2i
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL46C.*
+import org.lwjgl.system.Configuration
 import kotlin.io.path.Path
 import kotlin.io.path.div
 import kotlin.io.path.invariantSeparatorsPathString
@@ -25,7 +26,7 @@ fun main (vararg args: String)
 	// this is precarious >:/
 	val LP = DATA_PATH/"dll/"
 	loadSystemLibrary(LP/"lua5464.dll")
-	org.lwjgl.system.Configuration.LIBRARY_PATH.set((LP/"org/lwjgl").normalize().toAbsolutePath().invariantSeparatorsPathString)
+	Configuration.LIBRARY_PATH.set((LP/"org/lwjgl").normalize().toAbsolutePath().invariantSeparatorsPathString)
 
 	val RESOURCES = ResourceManager(ASSETS_PATH)
 	val SHADERZ = CompiledShaders(RESOURCES)
@@ -62,6 +63,8 @@ fun main (vararg args: String)
 		}
 	}
 
+	glfwSetWindowSizeLimits(windowHandle, 320, 240, GLFW_DONT_CARE, GLFW_DONT_CARE)
+
 	glfwMakeContextCurrent(windowHandle)
 	GL.createCapabilities()
 
@@ -78,6 +81,9 @@ fun main (vararg args: String)
 
 	val dummy = glCreateVertexArrays()
 
+//	val surface = glCreateFramebuffers()
+
+
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
 	{
@@ -86,7 +92,7 @@ fun main (vararg args: String)
 		glViewport(0, 0, windowSize.x, windowSize.y)
 		glClearNamedFramebufferfv(0, GL_COLOR, 0, floatArrayOf(0.5f, 0.1f, 0.4f, 0.0f))
 		glClearNamedFramebufferfv(0, GL_DEPTH, 0, floatArrayOf(0.0f))
-
+//		glBlitNamedFramebuffer()
 		pipeline.bind()
 		glBindVertexArray(dummy)
 		glDrawArrays(GL_TRIANGLES, 0, 3)
