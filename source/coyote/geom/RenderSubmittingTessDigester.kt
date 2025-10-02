@@ -1,17 +1,12 @@
 package coyote.geom
 
 import coyote.applyVertexFormat
-import org.lwjgl.opengl.GL11C
-import org.lwjgl.opengl.GL15C
-import org.lwjgl.opengl.GL30C
-import org.lwjgl.opengl.GL44C
-import org.lwjgl.opengl.GL45C
 import org.lwjgl.opengl.GL45C.*
 import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout
 
-class SubmittingTessDigester: TesselatorDigester()
+class RenderSubmittingTessDigester: TesselatorDigester()
 {
 	private var mode = GL_TRIANGLES
 	private val vao = glCreateVertexArrays()
@@ -22,6 +17,7 @@ class SubmittingTessDigester: TesselatorDigester()
 
 	private var iArena = Arena.ofConfined()
 	private var iMemory = MemorySegment.NULL
+	private var closed = false
 
 	fun withMode (i:Int) = this.also { mode = i }
 
@@ -34,6 +30,7 @@ class SubmittingTessDigester: TesselatorDigester()
 		indices: List<Int>,
 	)
 	{
+		check(!closed)
 		//TODO vb and ib data should use the
 		// same buffer stored one after the other
 		if (vertexCount < 0)
@@ -88,6 +85,12 @@ class SubmittingTessDigester: TesselatorDigester()
 
 	override fun close()
 	{
-		TODO("Not yet implemented")
+		check(!closed)
+		if (vb != 0)
+			glDeleteBuffers(vb)
+		if (ib != 0)
+			glDeleteBuffers(ib)
+		glDeleteVertexArrays(vao)
+		closed = true
 	}
 }

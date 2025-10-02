@@ -1,6 +1,6 @@
 package coyote
 
-import coyote.geom.SubmittingTessDigester
+import coyote.geom.RenderSubmittingTessDigester
 import coyote.geom.Tesselator
 import coyote.geom.VertexFormat
 import coyote.ren.CompiledShaders
@@ -94,7 +94,7 @@ fun main (vararg args: String)
 
 //	val surface = glCreateFramebuffers()
 	val tess = Tesselator()
-	val submitter = SubmittingTessDigester()
+	val submitter = RenderSubmittingTessDigester()
 
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
