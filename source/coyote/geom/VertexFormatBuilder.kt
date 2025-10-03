@@ -46,6 +46,7 @@ class VertexFormatBuilder
 	fun float4 () = floatn(4)
 
 	fun location3D () = floatn(3, "location")
+	fun textureCoord () = uv(0)
 	fun normal () = floatn(3, "normal")
 	fun uv (i:Int=0) = floatn(2, "uv$i")
 	fun byteColor () = custom(GL11C.GL_UNSIGNED_BYTE, 4, signed=false, normalized=true, "color")

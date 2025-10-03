@@ -1,29 +1,22 @@
 package coyote
 
-import coyote.geom.RenderSubmittingTessDigester
-import coyote.geom.SavingTessDigester
-import coyote.geom.Tesselator
-import coyote.geom.VertexFormat
+import coyote.geom.TesselatorStore
 import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
 import org.joml.Matrix4fStack
 import org.joml.Vector2d
 import org.joml.Vector2i
-import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL46C.*
 import org.lwjgl.system.Configuration
 import org.lwjgl.system.MemoryStack.stackPush
-import java.awt.Color
 import java.lang.foreign.Arena
 import java.lang.foreign.ValueLayout.JAVA_FLOAT
 import kotlin.io.path.Path
 import kotlin.io.path.div
 import kotlin.io.path.invariantSeparatorsPathString
-import kotlin.math.PI
-import kotlin.math.cos
 
 const val INITIAL_TITLE = "MACHINE WITNESS"
 const val INITIAL_WIDE = 650
@@ -32,6 +25,8 @@ const val INITIAL_TALL = 450
 val RESOURCE_PATH = Path("./resources/").normalize().toAbsolutePath()
 val ASSETS_PATH = RESOURCE_PATH/"assets"
 val DATA_PATH = RESOURCE_PATH/"data"
+
+val TEXTURE_WHITE = ResourceLocation.of("texture/white")
 
 val TEST_VERTEX_FORMAT = buildVertexFormat {
 	location3D()
@@ -49,6 +44,7 @@ fun main (vararg args: String)
 	val RESOURCES = ResourceManager(ASSETS_PATH)
 	val SHADERZ = CompiledShaders(RESOURCES)
 	val TEXTUREZ = TextureManager(RESOURCES)
+	val MODELZ = OBJModelManager(RESOURCES)
 
 	WindowManager.init()
 
@@ -83,7 +79,6 @@ fun main (vararg args: String)
 	val curMouseCo = Vector2d()
 	val mouseDelta = Vector2d()
 	var windowHasFocus = true
-	var pevWindowHasFocus = windowHasFocus
 
 	glfwSetWindowSizeCallback(windowHandle) { _, w, h ->
 		windowSize.set(w, h)
@@ -98,7 +93,8 @@ fun main (vararg args: String)
 	glEnable(GL_DEBUG_OUTPUT)
 	glDebugMessageCallback(::rendererDebugMessage, 0L)
 
-	val tessTestShader = SHADERZ[ResourceLocation.of("shader/test.lua")]
+	val shaderTest_uniformBlocks = SHADERZ[ResourceLocation.of("shader/test.lua")]
+	val shaderTest_storedOBJ = SHADERZ[ResourceLocation.of("shader/mesh test.lua")]
 
 	val matrixBuffer = glCreateBuffers()
 	val matrixBufferSize = ((4*4)*4L)*3
@@ -114,65 +110,20 @@ fun main (vararg args: String)
 	matrixSegment.setAtIndex(JAVA_FLOAT, 11L, 1f)
 	matrixSegment.setAtIndex(JAVA_FLOAT, 15L, 1f)
 
-//	val surface = glCreateFramebuffers()
-	val tess = Tesselator()
-	val submitter = RenderSubmittingTessDigester()
+	val textureTest_labyrinthOctoEnv = ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")
+	val textureTest_screenTri = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
 
-	val testTexture = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
+//	val surface = glCreateFramebuffers()
+
+	Arena.ofConfined().use { arena ->
+		val pm = arena.allocate(16*16*4)
+		pm.fill(0xFF.toByte())
+		val pic = NativeImage(16, 16, pm)
+		TEXTUREZ.add(TEXTURE_WHITE, pic)
+	}
 
 	val transform = Matrix4fStack(16)
-
-	val tessSaver = SavingTessDigester()
-	val testSavedModel = with(tess) {
-		begin(TEST_VERTEX_FORMAT)
-		vertexTransform.apply {
-			translate(-1.0, -1.0, -1.0)
-		}
-		textureTransform.apply {
-			scale(0.5)
-		}
-		color(Color.RED)
-		vertex(2, 1, 1, 2,1)
-		vertex(1, 1, 0, 1,1)
-		vertex(1, 2, 1, 1,2)
-		triangle()
-		color(Color.YELLOW)
-		vertex(0, 1, 1, 0,1)
-		vertex(1, 1, 0, 1,1)
-		vertex(1, 2, 1, 1,2)
-		triangle()
-		color(Color.BLUE)
-		vertex(0, 1, 1, 0,1)
-		vertex(1, 1, 0, 1,1)
-		vertex(1, 0, 1, 0,0)
-		triangle()
-		color(Color.WHITE)
-		vertex(2, 1, 1, 0,0)
-		vertex(1, 1, 0, 1,1)
-		vertex(1, 0, 1, 1,0)
-		triangle()
-		color(Color.RED.darker())
-		vertex(2, 1, 1, 0,0)
-		vertex(1, 1, 2, 1,1)
-		vertex(1, 2, 1, 1,2)
-		triangle()
-		color(Color.YELLOW.darker())
-		vertex(0, 1, 1, 0,0)
-		vertex(1, 1, 2, 1,1)
-		vertex(1, 2, 1, 1,2)
-		triangle()
-		color(Color.BLUE.darker())
-		vertex(0, 1, 1, 0,0)
-		vertex(1, 1, 2, 1,1)
-		vertex(1, 0, 1, 1,0)
-		triangle()
-		color(Color.WHITE.darker())
-		vertex(2, 1, 1, 0,0)
-		vertex(1, 1, 2, 1,1)
-		vertex(1, 0, 1, 1,0)
-		triangle()
-		end(tessSaver)
-	}
+	val testSavedModel = MODELZ[ResourceLocation.of("model/octmeshprev.obj")]
 
 	var viewPitch = 0.0
 	var viewYaw = 0.0
@@ -181,7 +132,6 @@ fun main (vararg args: String)
 
 	fun mouseGrabbedness (gr: Boolean)
 	{
-		val was = mouseGrabbed
 		mouseGrabbed = gr
 		if (gr)
 			glfwSetInputMode(windowHandle, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
@@ -194,11 +144,31 @@ fun main (vararg args: String)
 			mouseGrabbedness(!mouseGrabbed)
 	}
 
+	var currentShader: CompiledShaders.ShaderPipeline? = null
+	fun submit (tess: TesselatorStore, pr:Int)
+	{
+		val currentShader = currentShader ?: return
+		transform.get(matrixSegment, 0L)
+		nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
+		val uhh = glGetUniformBlockIndex(currentShader.vr, "MATRICES")
+		glUniformBlockBinding(currentShader.vr, uhh, 0)
+		glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixBuffer)
+		tess.submit(pr)
+	}
+	fun useShader (res: CompiledShaders.ShaderPipeline)
+	{
+		if (res == currentShader)
+			return
+		res.bind()
+		currentShader = res
+	}
+
+
+
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
 	{
 		pevMouseCo.set(curMouseCo)
-		pevWindowHasFocus = windowHasFocus
 		WindowManager.pollEvents()
 
 		stackPush().use { stack ->
@@ -231,16 +201,12 @@ fun main (vararg args: String)
 			perspective(70f, winWide.toFloat()/winTall, 0.001f, 100f)
 			rotateX(viewPitch.toRadiansf())
 			rotateY(viewYaw.toRadiansf())
-			get(matrixSegment, 0L)
-			nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
 		}
 
-		glBindTextureUnit(0, testTexture.handle)
-		tessTestShader.bind()
-		val uhh = glGetUniformBlockIndex(tessTestShader.vr, "MATRICES")
-		glUniformBlockBinding(tessTestShader.vr, uhh, 0)
-		glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixBuffer)
-		testSavedModel.submit(GL_TRIANGLES)
+		glBindTextureUnit(0, TEXTUREZ[textureTest_labyrinthOctoEnv].handle)
+
+		useShader(shaderTest_storedOBJ)
+		submit(testSavedModel, GL_TRIANGLES)
 
 		glfwSwapBuffers(windowHandle)
 		pevWindowSize.set(windowSize)

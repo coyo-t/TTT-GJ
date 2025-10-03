@@ -49,4 +49,17 @@ class TesselatorStore(
 			glDeleteVertexArrays(vao)
 		}
 	}
+
+
+	companion object
+	{
+		val NON = TesselatorStore(
+			VertexFormat.NON,
+			0,
+			0,
+			LongRange.EMPTY,
+			LongRange.EMPTY,
+			MemorySegment.NULL,
+		)
+	}
 }

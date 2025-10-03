@@ -51,6 +51,40 @@ class TextureManager(val resources: ResourceManager)
 		Texture(w, h, t)
 	}
 
+	private var filter = GL_NEAREST
+	private var repeat = GL_REPEAT
+
+	private fun createGL (pic: NativeImage): Texture
+	{
+		try {
+			val t = glCreateTextures(GL_TEXTURE_2D)
+			val wide = pic.wide
+			val tall = pic.tall
+			glTextureStorage2D(t, 1, GL_RGBA8, wide, tall)
+			glTextureParameteri(t, GL_TEXTURE_MIN_FILTER, filter)
+			glTextureParameteri(t, GL_TEXTURE_MAG_FILTER, filter)
+			glTextureParameteri(t, GL_TEXTURE_WRAP_S, repeat)
+			glTextureParameteri(t, GL_TEXTURE_WRAP_T, repeat)
+			nglTextureSubImage2D(t, 0, 0, 0, wide, tall, GL_RGBA, GL_UNSIGNED_BYTE, pic.data.address())
+			return Texture(wide, tall, t)
+		}
+		catch (e: Exception)
+		{
+			System.err.println("problem creating image textuer")
+			e.printStackTrace()
+			return missingTexture
+		}
+	}
+
+	fun add (underName: ResourceLocation, pic: NativeImage): Texture
+	{
+		filter = GL_NEAREST
+		repeat = GL_REPEAT
+		return createGL(pic).also {
+			nametable[underName] = it
+		}
+	}
+
 	operator fun get (rl: ResourceLocation, discardImageData:Boolean=false): Texture
 	{
 		if (rl in nametable)
@@ -60,22 +94,15 @@ class TextureManager(val resources: ResourceManager)
 		{
 			val res = requireNotNull(resources[rl]) { "no resource here" }
 			val pic = imageManager.loadImage(res)
-			val t = glCreateTextures(GL_TEXTURE_2D)
-			val wide = pic.wide
-			val tall = pic.tall
-			glTextureStorage2D(t, 1, GL_RGBA8, wide, tall)
 
 			val meta = res.getMetaData() ?: emptyMap()
-			val filter = when (meta["filter"])
+			filter = when (meta["filter"])
 			{
 				"true", "linear" -> GL_LINEAR
 				"false", "nearest" -> GL_NEAREST
 				else -> GL_NEAREST
 			}
-			glTextureParameteri(t, GL_TEXTURE_MIN_FILTER, filter)
-			glTextureParameteri(t, GL_TEXTURE_MAG_FILTER, filter)
-
-			val repeat = when (meta["wrapping"])
+			repeat = when (meta["wrapping"])
 			{
 				"true", "repeat" -> GL_REPEAT
 				"false", "clamp" -> GL_CLAMP_TO_EDGE
@@ -83,10 +110,7 @@ class TextureManager(val resources: ResourceManager)
 				"mirror" -> GL_MIRRORED_REPEAT
 				else -> GL_REPEAT
 			}
-			glTextureParameteri(t, GL_TEXTURE_WRAP_S, repeat)
-			glTextureParameteri(t, GL_TEXTURE_WRAP_T, repeat)
-			nglTextureSubImage2D(t, 0, 0, 0, wide, tall, GL_RGBA, GL_UNSIGNED_BYTE, pic.data.address())
-			return Texture(wide, tall, t).also {
+			return createGL(pic).also {
 				nametable[rl] = it
 				if (discardImageData)
 					pic.close()
