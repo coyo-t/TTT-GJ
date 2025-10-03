@@ -13,7 +13,7 @@ class TextureManager(val resources: ResourceManager)
 
 	val imageManager = PicManager(resources)
 
-	private val nametable = mutableMapOf<ResourceLocation, Texture>()
+	private val textureNametable = mutableMapOf<ResourceLocation, Texture>()
 
 	private val missingIMage by lazy {
 		val sz = 8
@@ -51,22 +51,17 @@ class TextureManager(val resources: ResourceManager)
 		Texture(w, h, t)
 	}
 
-	private var filter = GL_NEAREST
-	private var repeat = GL_REPEAT
+	var filter = GL_NEAREST
+	var repeat = GL_REPEAT
 
 	private fun createGL (pic: NativeImage): Texture
 	{
 		try {
-			val t = glCreateTextures(GL_TEXTURE_2D)
 			val wide = pic.wide
 			val tall = pic.tall
-			glTextureStorage2D(t, 1, GL_RGBA8, wide, tall)
-			glTextureParameteri(t, GL_TEXTURE_MIN_FILTER, filter)
-			glTextureParameteri(t, GL_TEXTURE_MAG_FILTER, filter)
-			glTextureParameteri(t, GL_TEXTURE_WRAP_S, repeat)
-			glTextureParameteri(t, GL_TEXTURE_WRAP_T, repeat)
-			nglTextureSubImage2D(t, 0, 0, 0, wide, tall, GL_RGBA, GL_UNSIGNED_BYTE, pic.data.address())
-			return Texture(wide, tall, t)
+			return createTexture(wide, tall).also {
+				it.uploadImage(pic)
+			}
 		}
 		catch (e: Exception)
 		{
@@ -76,19 +71,33 @@ class TextureManager(val resources: ResourceManager)
 		}
 	}
 
+	fun add (underName: ResourceLocation, texture: Texture): Texture
+	{
+		textureNametable[underName] = texture
+		return texture
+	}
+
 	fun add (underName: ResourceLocation, pic: NativeImage): Texture
 	{
 		filter = GL_NEAREST
 		repeat = GL_REPEAT
-		return createGL(pic).also {
-			nametable[underName] = it
+		return add(underName, createGL(pic))
+	}
+
+	fun createTexture (wide:Int, tall:Int): Texture
+	{
+		val t = glCreateTextures(GL_TEXTURE_2D)
+		glTextureStorage2D(t, 1, GL_RGBA8, wide, tall)
+		return Texture(wide,tall,t).also {
+			it.setFilter(filter, filter)
+			it.setRepeat(x=repeat, y=repeat)
 		}
 	}
 
 	operator fun get (rl: ResourceLocation, discardImageData:Boolean=false): Texture
 	{
-		if (rl in nametable)
-			return nametable.getValue(rl)
+		if (rl in textureNametable)
+			return textureNametable.getValue(rl)
 
 		try
 		{
@@ -111,7 +120,7 @@ class TextureManager(val resources: ResourceManager)
 				else -> GL_REPEAT
 			}
 			return createGL(pic).also {
-				nametable[rl] = it
+				textureNametable[rl] = it
 				if (discardImageData)
 					pic.close()
 			}
@@ -120,7 +129,7 @@ class TextureManager(val resources: ResourceManager)
 		{
 			System.err.println("image load $rl error:")
 			e.printStackTrace()
-			return missingTexture.also { nametable[rl] = it }
+			return missingTexture.also { textureNametable[rl] = it }
 		}
 	}
 
