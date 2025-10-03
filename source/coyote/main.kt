@@ -2,23 +2,21 @@ package coyote
 
 import coyote.geom.RenderSubmittingTessDigester
 import coyote.geom.Tesselator
-import coyote.geom.TesselatorStore
 import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
+import coyote.window.WindowHint
+import coyote.window.WindowManager
 import org.joml.Math.lerp
-import org.joml.Matrix4fStack
 import org.joml.Vector2d
 import org.joml.Vector2i
 import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.*
-import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL46C.*
 import org.lwjgl.system.Configuration
 import org.lwjgl.system.MemoryStack.stackPush
 import java.awt.Color
 import java.lang.foreign.Arena
-import java.lang.foreign.ValueLayout.JAVA_FLOAT
 import kotlin.io.path.Path
 import kotlin.io.path.div
 import kotlin.io.path.invariantSeparatorsPathString
@@ -90,64 +88,51 @@ fun main (vararg args: String)
 	val windowSize = Vector2i(INITIAL_WIDE, INITIAL_TALL)
 	val pevWindowSize = Vector2i(windowSize)
 
-	WindowManager.hint(WindowManager.Hint.Defaults)
-	WindowManager.hint(WindowManager.Hint.MajorContextVersion, 4)
-	WindowManager.hint(WindowManager.Hint.MinorContextVersion, 6)
-	WindowManager.hint(WindowManager.Hint.OpenGLProfile, GLFW_OPENGL_CORE_PROFILE)
+	WindowManager.hint(WindowHint.Defaults)
+	WindowManager.hint(WindowHint.MajorContextVersion, 4)
+	WindowManager.hint(WindowHint.MinorContextVersion, 6)
+	WindowManager.hint(WindowHint.OpenGLProfile, GLFW_OPENGL_CORE_PROFILE)
 
 	glfwGetVideoMode(glfwGetPrimaryMonitor())?.let { l ->
 		val w = l.width()
 		val h = l.height()
-		WindowManager.hint(WindowManager.Hint.LocationX, (w - windowSize.x) / 2)
-		WindowManager.hint(WindowManager.Hint.LocationY, (h - windowSize.y) / 2)
+		WindowManager.hint(WindowHint.LocationX, (w - windowSize.x) / 2)
+		WindowManager.hint(WindowHint.LocationY, (h - windowSize.y) / 2)
 	}
 
-	WindowManager.hint(WindowManager.Hint.Resizable, true)
-	WindowManager.hint(WindowManager.Hint.Visible, false)
+	WindowManager.hint(WindowHint.Resizable, true)
+	WindowManager.hint(WindowHint.Visible, false)
 
-	val windowHandle = WindowManager.createWindow(INITIAL_TITLE, windowSize)
+	val window = WindowManager.createWindow(INITIAL_TITLE, windowSize)
+	window.makeContextCurrent()
 
-	glfwSetWindowSizeLimits(windowHandle, 320, 240, GLFW_DONT_CARE, GLFW_DONT_CARE)
-
-	glfwMakeContextCurrent(windowHandle)
-	GL.createCapabilities()
-
-	glfwSetInputMode(windowHandle, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE)
+	window.setSizeLimits(
+		minSize = 320 to 240,
+		maxSize = null,
+	)
+	window.setRawMouseMotion(true)
 
 	val pevMouseCo = Vector2d()
 	val curMouseCo = Vector2d()
 	val mouseDelta = Vector2d()
 	var windowHasFocus = true
 
-	glfwSetWindowSizeCallback(windowHandle) { _, w, h ->
+	glfwSetWindowSizeCallback(window.handle) { _, w, h ->
 		windowSize.set(w, h)
 	}
 
-	glfwSetWindowFocusCallback(windowHandle) { _, focused ->
+	glfwSetWindowFocusCallback(window.handle) { _, focused ->
 		windowHasFocus = focused
 	}
 
 	println(":)")
 
-	glEnable(GL_DEBUG_OUTPUT)
-	glDebugMessageCallback(::rendererDebugMessage, 0L)
+	drawCreateCapabilities()
+	drawSetState(GL_DEBUG_OUTPUT, true)
+	drawSetDebugMessageCallback(0L, ::rendererDebugMessage)
 
 	val shaderTest_uniformBlocks = SHADERZ[ResourceLocation.of("shader/test.lua")]
 	val shaderTest_storedOBJ = SHADERZ[ResourceLocation.of("shader/mesh test.lua")]
-
-	val matrixBuffer = glCreateBuffers()
-	val matrixBufferSize = ((4*4)*4L)*3
-	glNamedBufferStorage(
-		matrixBuffer,
-		matrixBufferSize,
-		GL_DYNAMIC_STORAGE_BIT,
-	)
-
-	val matrixSegment = Arena.ofAuto().allocate(matrixBufferSize)
-	matrixSegment.setAtIndex(JAVA_FLOAT, 0L, 1f)
-	matrixSegment.setAtIndex(JAVA_FLOAT, 5L, 1f)
-	matrixSegment.setAtIndex(JAVA_FLOAT, 11L, 1f)
-	matrixSegment.setAtIndex(JAVA_FLOAT, 15L, 1f)
 
 	val textureTest_labyrinthOctoEnv = TEXTUREZ[ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")]
 	val textureTest_screenTri = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
@@ -161,8 +146,8 @@ fun main (vararg args: String)
 		TEXTUREZ.add(TEXTURE_WHITE, pic)
 	}
 
-	val transform = Matrix4fStack(16)
 	val testSavedModel = MODELZ[ResourceLocation.of("model/octmeshprev.obj")]
+
 
 	val inputMap = mutableMapOf<Int, Boolean>().withDefault { false }
 	val inputVec = Vector3d()
@@ -176,12 +161,12 @@ fun main (vararg args: String)
 	{
 		mouseGrabbed = gr
 		if (gr)
-			glfwSetInputMode(windowHandle, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+			window.setCursorMode(GLFW_CURSOR_DISABLED)
 		else
-			glfwSetInputMode(windowHandle, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+			window.setCursorMode(GLFW_CURSOR_NORMAL)
 	}
 
-	glfwSetKeyCallback(windowHandle) { _, key, scancode, action, mods ->
+	glfwSetKeyCallback(window.handle) { _, key, scancode, action, mods ->
 		if (action == GLFW_PRESS)
 			inputMap[key] = true
 		else if (action == GLFW_RELEASE)
@@ -192,87 +177,27 @@ fun main (vararg args: String)
 		}
 	}
 
-	var currentShader: CompiledShaders.ShaderPipeline? = null
-	fun drawSubmit (tess: TesselatorStore, pr:Int)
-	{
-		if (tess.vertexCount <= 0)
-			return
-		val currentShader = currentShader ?: return
-		transform.get(matrixSegment, 0L)
-		nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
-		val uhh = glGetUniformBlockIndex(currentShader.vr, "MATRICES")
-		glUniformBlockBinding(currentShader.vr, uhh, 0)
-		glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixBuffer)
-		tess.submit(pr)
-	}
-	fun drawUseShader (res: CompiledShaders.ShaderPipeline)
-	{
-		if (res == currentShader)
-			return
-		res.bind()
-		currentShader = res
-	}
-
-	var currentSurfaceTarget = 0
-
-	fun drawSetSurface (who: Int)
-	{
-		if (currentSurfaceTarget == who)
-			return
-		currentSurfaceTarget = who
-		glBindFramebuffer(GL_FRAMEBUFFER, who)
-	}
-	fun drawResetSurface ()
-	{
-		drawSetSurface(0)
-	}
-	fun drawSetViewPort (wide:Number, tall:Number)
-	{
-		glViewport(0, 0, wide.toInt(), tall.toInt())
-	}
-	fun drawBindTexture (slot:Int, who: Texture)
-	{
-		glBindTextureUnit(slot, who.handle)
-	}
-	fun drawClearColor (r:Number, g:Number, b:Number, a:Number=1)
-	{
-		glClearNamedFramebufferfv(currentSurfaceTarget, GL_COLOR, 0, floatArrayOf(
-			r.toFloat(),
-			g.toFloat(),
-			b.toFloat(),
-			a.toFloat(),
-		))
-	}
-	fun drawClearColor (c: Color)
-	{
-		drawClearColor(c.red/255.0, c.green/255.0, c.blue/255.0, c.alpha/255.0)
-	}
-
-	fun drawClearDepth (d: Number)
-	{
-		glClearNamedFramebufferfv(currentSurfaceTarget, GL_DEPTH, 0, floatArrayOf(d.toFloat()))
-	}
-
 	val testRenderTargetTexture = TEXTUREZ.createTexture(256, 256).apply {
 		setFilter(GL_LINEAR, GL_LINEAR)
 	}
 	val testFBDepth = glCreateRenderbuffers()
 	glNamedRenderbufferStorage(testFBDepth, GL_DEPTH_COMPONENT, 256, 256)
-	val testFrameBuffer = glCreateFramebuffers()
-	glNamedFramebufferTexture(testFrameBuffer, GL_COLOR_ATTACHMENT0, testRenderTargetTexture.handle, 0)
-	glNamedFramebufferRenderbuffer(testFrameBuffer, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, testFBDepth)
+
+	val testSurface = drawCreateSurface()
+	testSurface.setColorAttachment(0, testRenderTargetTexture)
+	testSurface.setDepthAttachment(256, 256)
 
 	val tessSubmitter = RenderSubmittingTessDigester()
 	val tess = Tesselator()
 
 	val rtTexDisplayTestUhhh = TEXTUREZ[ResourceLocation.of("texture/color calibration card.kra")]
 
-	glDepthFunc(GL_LESS)
+	drawSetDepthCompareFunc(GL_LESS)
 
 	var time = WindowManager.time
 	var pevTime = time
-	glfwShowWindow(windowHandle)
-	while (!glfwWindowShouldClose(windowHandle))
+	window.show()
+	while (!window.shouldClose)
 	{
 		pevTime = time
 		val time = WindowManager.time
@@ -283,7 +208,7 @@ fun main (vararg args: String)
 		stackPush().use { stack ->
 			val x = stack.mallocDouble(1)
 			val y = stack.mallocDouble(1)
-			glfwGetCursorPos(windowHandle, x, y)
+			glfwGetCursorPos(window.handle, x, y)
 			curMouseCo.set(x.get(), y.get())
 			curMouseCo.sub(pevMouseCo, mouseDelta)
 		}
@@ -294,8 +219,6 @@ fun main (vararg args: String)
 		{
 			viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
 			viewYaw = viewYaw + mouseDelta.x * viewSens
-
-
 
 			inputVec.set(0.0)
 			inputVec.x += if (inputMap[GLFW_KEY_D] == true) 1.0 else 0.0
@@ -311,15 +234,11 @@ fun main (vararg args: String)
 
 		val winWide = windowSize.x
 		val winTall = windowSize.y
-		drawSetViewPort(winWide, winTall)
-		run {
+		drawToSurface(testSurface) {
 			val (wide,tall) = testRenderTargetTexture.size
-			drawSetSurface(testFrameBuffer)
-			drawClearColor(Color.WHITE)
-			drawSetSurface(0)
 			drawSetViewPort(wide, tall)
-			glEnable(GL_DEPTH_TEST)
-			glDepthMask(true)
+			drawSetDepthTestEnable(true)
+			drawSetDepthWriteEnable(true)
 			transform.apply {
 				identity()
 //				ortho(0f, wide.toFloat(), tall.toFloat(), 0f, 0f, 10f)
@@ -333,29 +252,22 @@ fun main (vararg args: String)
 			{
 				begin(TEST_VERTEX_FORMAT)
 				color(Color.WHITE)
-				vertexTransform.apply {
-					identity()
-//					rotateZ(sin(time * PI) * 45.0.toRadians())
-//					scale(100.0)
-//					translate(-1.0, -1.0, 0.0)
-//					scale(2.0)
-				}
 				val zp = sin(time * PI)
 				vertex(-0.5,-0.5,zp, 0,0)
 				vertex(+0.5,-0.5,zp, 1,0)
 				vertex(+0.5,+0.5,zp, 1,1)
 				vertex(-0.5,+0.5,zp, 0,1)
 				quad()
-				drawUseShader(shaderTest_uniformBlocks)
+				drawSetShader(shaderTest_uniformBlocks)
 				drawBindTexture(0, rtTexDisplayTestUhhh)
 				end(tessSubmitter.withMode(GL_TRIANGLES))
 			}
-			drawResetSurface()
 		}
 
-		drawSetSurface(0)
-		glEnable(GL_DEPTH_TEST)
-		glDepthMask(true)
+		drawSetSurface(null)
+
+		drawSetDepthTestEnable(true)
+		drawSetDepthWriteEnable(true)
 		drawSetViewPort(winWide, winTall)
 		drawClearDepth(1)
 		transform.apply {
@@ -366,18 +278,18 @@ fun main (vararg args: String)
 			translate(-viewCo.x.toFloat(), -viewCo.y.toFloat(), -viewCo.z.toFloat())
 		}
 
-		drawUseShader(shaderTest_storedOBJ)
+		drawSetShader(shaderTest_storedOBJ)
 		drawBindTexture(0, textureTest_labyrinthOctoEnv)
 		drawBindTexture(1, testRenderTargetTexture)
 		drawSubmit(testSavedModel, GL_TRIANGLES)
 
-		drawUseShader(shaderTest_uniformBlocks)
+		drawSetShader(shaderTest_uniformBlocks)
 		drawBindTexture(0, TEXTUREZ[TEXTURE_WHITE])
 		drawSubmit(modelTest_compass, GL_LINES)
 
-		glBlitNamedFramebuffer(testFrameBuffer, 0, 0, 0, 256, 256, 32, 32, 128, 128, GL_COLOR_BUFFER_BIT, GL_NEAREST)
+		drawBlitSurfaces(testSurface, 0, 0, 256, 256, null, 32, 32, 128, 128, GL_COLOR_BUFFER_BIT, GL_LINEAR)
 
-		glfwSwapBuffers(windowHandle)
+		window.swapBuffers()
 		pevWindowSize.set(windowSize)
 	}
 
