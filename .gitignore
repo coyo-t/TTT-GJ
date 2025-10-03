@@ -1,6 +1,8 @@
 hs_err_pid*.log
 
 **/*.kra~
+**/*.png~
+**/*.blend1
 guts/
 
 .gradle

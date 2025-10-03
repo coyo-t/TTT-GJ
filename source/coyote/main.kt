@@ -12,6 +12,7 @@ import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL46C.*
 import org.lwjgl.system.Configuration
 import org.lwjgl.system.MemoryStack.stackPush
+import java.awt.Color
 import java.lang.foreign.Arena
 import java.lang.foreign.ValueLayout.JAVA_FLOAT
 import kotlin.io.path.Path
@@ -110,7 +111,7 @@ fun main (vararg args: String)
 	matrixSegment.setAtIndex(JAVA_FLOAT, 11L, 1f)
 	matrixSegment.setAtIndex(JAVA_FLOAT, 15L, 1f)
 
-	val textureTest_labyrinthOctoEnv = ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")
+	val textureTest_labyrinthOctoEnv = TEXTUREZ[ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")]
 	val textureTest_screenTri = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
 
 //	val surface = glCreateFramebuffers()
@@ -124,6 +125,37 @@ fun main (vararg args: String)
 
 	val transform = Matrix4fStack(16)
 	val testSavedModel = MODELZ[ResourceLocation.of("model/octmeshprev.obj")]
+	val modelTest_compass = buildModel(TEST_VERTEX_FORMAT) {
+		vertexTransform.apply {
+			scale(0.1)
+		}
+		// north
+		color(Color(0xD23636))
+		startLine()
+		vertex(-0.1, -0.1, -1)
+		vertex(-0.1, +0.1, -1)
+		vertex(+0.1, +0.1, -1)
+		vertex(+0.1, -0.1, -1)
+		endLine(true)
+
+		// east
+		color(Color(0xFFD240))
+		startLine()
+		vertex(+1, -0.1, -0.1)
+		vertex(+1, +0.1, -0.1)
+		vertex(+1, +0.1, +0.1)
+		vertex(+1, -0.1, +0.1)
+		endLine(true)
+
+		// up
+		color(Color(0x67A6FC))
+		startLine()
+		vertex(-0.1, +1, -0.1)
+		vertex(-0.1, +1, +0.1)
+		vertex(+0.1, +1, +0.1)
+		vertex(+0.1, +1, -0.1)
+		endLine(true)
+	}
 
 	var viewPitch = 0.0
 	var viewYaw = 0.0
@@ -203,10 +235,14 @@ fun main (vararg args: String)
 			rotateY(viewYaw.toRadiansf())
 		}
 
-		glBindTextureUnit(0, TEXTUREZ[textureTest_labyrinthOctoEnv].handle)
 
 		useShader(shaderTest_storedOBJ)
+		glBindTextureUnit(0, textureTest_labyrinthOctoEnv.handle)
 		submit(testSavedModel, GL_TRIANGLES)
+
+		useShader(shaderTest_uniformBlocks)
+		glBindTextureUnit(0, TEXTUREZ[TEXTURE_WHITE].handle)
+		submit(modelTest_compass, GL_LINES)
 
 		glfwSwapBuffers(windowHandle)
 		pevWindowSize.set(windowSize)

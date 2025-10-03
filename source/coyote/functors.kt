@@ -1,5 +1,8 @@
 package coyote
 
+import coyote.geom.SavingTessDigester
+import coyote.geom.Tesselator
+import coyote.geom.TesselatorStore
 import coyote.geom.VertexFormat
 import coyote.geom.VertexFormatBuilder
 import org.joml.Matrix4fc
@@ -156,4 +159,14 @@ fun Matrix4fc.get (into: MemorySegment, offset: Long)
 	into[JAVA_FLOAT, offset+(4*13L)] = m31()
 	into[JAVA_FLOAT, offset+(4*14L)] = m32()
 	into[JAVA_FLOAT, offset+(4*15L)] = m33()
+}
+
+@OptIn(ExperimentalContracts::class)
+inline fun buildModel (format: VertexFormat, cb: Tesselator.()->Unit): TesselatorStore
+{
+	contract { callsInPlace(cb, InvocationKind.EXACTLY_ONCE) }
+	val tess = Tesselator()
+	tess.begin(format)
+	tess.cb()
+	return tess.end(SavingTessDigester())
 }

@@ -1,6 +1,5 @@
 package coyote.geom
 
-import coyote.geom.VertexFormat
 import coyote.floorToInt
 import coyote.set
 import org.joml.Matrix3x2dStack
@@ -61,6 +60,8 @@ class Tesselator
 	private val tempv3 = Vector3d()
 	private val tempv2 = Vector2d()
 
+	private var lineStart = 0
+
 	lateinit var currentVertexFormat: VertexFormat
 		private set
 
@@ -81,6 +82,7 @@ class Tesselator
 
 	private fun clear ()
 	{
+		lineStart = 0
 		vertexCursor = 0
 		logicalVertexCount = 0
 		indices.clear()
@@ -105,6 +107,41 @@ class Tesselator
 		pUV1 = format.byUsage["uv1"]
 		pNormal = format.byUsage["normal"]
 		pColor = format.byUsage["color"]
+	}
+
+	fun line ()
+	{
+		indices += logicalVertexCount - 2
+		indices += logicalVertexCount - 1
+	}
+
+	fun startLine ()
+	{
+		lineStart = logicalVertexCount
+	}
+
+	fun endLine (closed: Boolean)
+	{
+		val lastIndex = logicalVertexCount - 1
+		if (lastIndex <= lineStart)
+		{
+			return
+		}
+		var i = lineStart + 1
+		var j = lineStart
+
+		while (i <= lastIndex)
+		{
+			indices += i
+			indices += j
+			j = i
+			i += 1
+		}
+		if (closed)
+		{
+			indices += lineStart
+			indices += j
+		}
 	}
 
 	fun quad ()
