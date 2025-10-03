@@ -177,16 +177,30 @@ fun main (vararg args: String)
 	var viewPitch = 0.0
 	var viewYaw = 0.0
 	var viewSens = 1.0 / 8.0
-	var mouseGrabbed = true
+	var mouseGrabbed = false
 
+	fun mouseGrabbedness (gr: Boolean)
+	{
+		val was = mouseGrabbed
+		mouseGrabbed = gr
+		if (gr)
+			glfwSetInputMode(windowHandle, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+		else
+			glfwSetInputMode(windowHandle, GLFW_CURSOR, GLFW_CURSOR_NORMAL)
+	}
 
-	glfwSetInputMode(windowHandle, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+	glfwSetKeyCallback(windowHandle) { _, key, scancode, action, mods ->
+		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+			mouseGrabbedness(!mouseGrabbed)
+	}
+
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
 	{
 		pevMouseCo.set(curMouseCo)
 		pevWindowHasFocus = windowHasFocus
 		WindowManager.pollEvents()
+
 		stackPush().use { stack ->
 			val x = stack.mallocDouble(1)
 			val y = stack.mallocDouble(1)
@@ -194,11 +208,14 @@ fun main (vararg args: String)
 			curMouseCo.set(x.get(), y.get())
 			curMouseCo.sub(pevMouseCo, mouseDelta)
 		}
+		if (!windowHasFocus)
+			mouseGrabbedness(false)
 
-
-
-		viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
-		viewYaw = viewYaw + mouseDelta.x * viewSens
+		if (mouseGrabbed)
+		{
+			viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
+			viewYaw = viewYaw + mouseDelta.x * viewSens
+		}
 
 		val time = WindowManager.time
 
