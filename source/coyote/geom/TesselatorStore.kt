@@ -3,10 +3,6 @@ package coyote.geom
 import coyote.applyVertexFormat
 import org.lwjgl.opengl.GL46C.*
 import java.lang.foreign.MemorySegment
-import java.nio.channels.FileChannel
-import java.nio.file.StandardOpenOption
-import kotlin.io.path.Path
-import kotlin.io.path.createParentDirectories
 
 class TesselatorStore(
 	val format: VertexFormat,
@@ -20,14 +16,6 @@ class TesselatorStore(
 
 	val vertexByteSize get() = vertexRange.last-vertexRange.first+1
 	val indexByteSize get() = indexRange.last-indexRange.first+1
-
-	init
-	{
-		val p = Path("./guts/vbdump").normalize().toAbsolutePath().createParentDirectories()
-		FileChannel.open(p, StandardOpenOption.WRITE, StandardOpenOption.CREATE).use { channel ->
-			channel.write(data.asByteBuffer())
-		}
-	}
 
 	private var vao = -1
 	private var vb = 0

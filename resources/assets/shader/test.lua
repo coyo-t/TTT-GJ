@@ -35,11 +35,13 @@ return {
 			vec4 color;
 		} v_v;
 
+		layout(binding=0) uniform sampler2D gm_BaseTexture;
+
 		layout(location=0) out vec4 pixel;
 
 		void main ()
 		{
-			pixel = v_v.color;
+			pixel = texture(gm_BaseTexture, v_v.texture) * v_v.color;
 		}
 	]]
 }

@@ -14,16 +14,13 @@ import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL46C.*
 import org.lwjgl.system.Configuration
 import java.awt.Color
-import java.lang.Math.toRadians
 import java.lang.foreign.Arena
-import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout.JAVA_FLOAT
 import kotlin.io.path.Path
 import kotlin.io.path.div
 import kotlin.io.path.invariantSeparatorsPathString
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.sin
 
 const val INITIAL_TITLE = "MACHINE WITNESS"
 const val INITIAL_WIDE = 650
@@ -50,35 +47,27 @@ fun main (vararg args: String)
 	val SHADERZ = CompiledShaders(RESOURCES)
 	val TEXTUREZ = TextureManager(RESOURCES)
 
-	check(glfwInit()) {
-		val (n,_) = getWindowManagerError()
-		"glfw failed to init ($n)"
-	}
+	WindowManager.init()
 
 	val windowSize = Vector2i(INITIAL_WIDE, INITIAL_TALL)
 	val pevWindowSize = Vector2i(windowSize)
 
-	glfwDefaultWindowHints()
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6)
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4)
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE)
+	WindowManager.hint(WindowManager.Hint.Defaults)
+	WindowManager.hint(WindowManager.Hint.MajorContextVersion, 4)
+	WindowManager.hint(WindowManager.Hint.MinorContextVersion, 6)
+	WindowManager.hint(WindowManager.Hint.OpenGLProfile, GLFW_OPENGL_CORE_PROFILE)
 
 	glfwGetVideoMode(glfwGetPrimaryMonitor())?.let { l ->
 		val w = l.width()
 		val h = l.height()
-		glfwWindowHint(GLFW_POSITION_X, (w - windowSize.x) / 2)
-		glfwWindowHint(GLFW_POSITION_Y, (h - windowSize.y) / 2)
+		WindowManager.hint(WindowManager.Hint.LocationX, (w - windowSize.x) / 2)
+		WindowManager.hint(WindowManager.Hint.LocationY, (h - windowSize.y) / 2)
 	}
 
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE)
-	glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE)
+	WindowManager.hint(WindowManager.Hint.Resizable, true)
+	WindowManager.hint(WindowManager.Hint.Visible, false)
 
-	val windowHandle = glfwCreateWindow(windowSize.x, windowSize.y, INITIAL_TITLE, 0L, 0L).also {
-		check(it != 0L) {
-			val (n,_) = getWindowManagerError()
-			"failed to create window ($n)"
-		}
-	}
+	val windowHandle = WindowManager.createWindow(INITIAL_TITLE, windowSize)
 
 	glfwSetWindowSizeLimits(windowHandle, 320, 240, GLFW_DONT_CARE, GLFW_DONT_CARE)
 
@@ -125,45 +114,51 @@ fun main (vararg args: String)
 	val tessSaver = SavingTessDigester()
 	val testSavedModel = with(tess) {
 		begin(TEST_VERTEX_FORMAT)
+		vertexTransform.apply {
+			translate(-1.0, -1.0, -1.0)
+		}
+		textureTransform.apply {
+			scale(0.5)
+		}
 		color(Color.RED)
-		vertex(1, 0, 0, 0,0)
-		vertex(0, 0, -1, 0,0)
-		vertex(0, 1, 0, 0,0)
+		vertex(2, 1, 1, 2,1)
+		vertex(1, 1, 0, 1,1)
+		vertex(1, 2, 1, 1,2)
 		triangle()
 		color(Color.YELLOW)
-		vertex(-1, 0, 0, 0,0)
-		vertex(0, 0, -1, 0,0)
-		vertex(0, 1, 0, 0,0)
+		vertex(0, 1, 1, 0,1)
+		vertex(1, 1, 0, 1,1)
+		vertex(1, 2, 1, 1,2)
 		triangle()
 		color(Color.BLUE)
-		vertex(-1, 0, 0, 0,0)
-		vertex(0, 0, -1, 0,0)
-		vertex(0, -1, 0, 0,0)
+		vertex(0, 1, 1, 0,1)
+		vertex(1, 1, 0, 1,1)
+		vertex(1, 0, 1, 0,0)
 		triangle()
 		color(Color.WHITE)
-		vertex(1, 0, 0, 0,0)
-		vertex(0, 0, -1, 0,0)
-		vertex(0, -1, 0, 0,0)
+		vertex(2, 1, 1, 0,0)
+		vertex(1, 1, 0, 1,1)
+		vertex(1, 0, 1, 1,0)
 		triangle()
 		color(Color.RED.darker())
-		vertex(1, 0, 0, 0,0)
-		vertex(0, 0, 1, 0,0)
-		vertex(0, 1, 0, 0,0)
+		vertex(2, 1, 1, 0,0)
+		vertex(1, 1, 2, 1,1)
+		vertex(1, 2, 1, 1,2)
 		triangle()
 		color(Color.YELLOW.darker())
-		vertex(-1, 0, 0, 0,0)
-		vertex(0, 0, 1, 0,0)
-		vertex(0, 1, 0, 0,0)
+		vertex(0, 1, 1, 0,0)
+		vertex(1, 1, 2, 1,1)
+		vertex(1, 2, 1, 1,2)
 		triangle()
 		color(Color.BLUE.darker())
-		vertex(-1, 0, 0, 0,0)
-		vertex(0, 0, 1, 0,0)
-		vertex(0, -1, 0, 0,0)
+		vertex(0, 1, 1, 0,0)
+		vertex(1, 1, 2, 1,1)
+		vertex(1, 0, 1, 1,0)
 		triangle()
 		color(Color.WHITE.darker())
-		vertex(1, 0, 0, 0,0)
-		vertex(0, 0, 1, 0,0)
-		vertex(0, -1, 0, 0,0)
+		vertex(2, 1, 1, 0,0)
+		vertex(1, 1, 2, 1,1)
+		vertex(1, 0, 1, 1,0)
 		triangle()
 		end(tessSaver)
 	}
@@ -177,24 +172,20 @@ fun main (vararg args: String)
 		val winWide = windowSize.x
 		val winTall = windowSize.y
 		glViewport(0, 0, winWide, winTall)
-		glClearNamedFramebufferfv(0, GL_COLOR, 0, floatArrayOf(0.5f, 0.1f, 0.4f, 0.0f))
+//		glClearNamedFramebufferfv(0, GL_COLOR, 0, floatArrayOf(0.5f, 0.1f, 0.4f, 0.0f))
 		glClearNamedFramebufferfv(0, GL_DEPTH, 0, floatArrayOf(0.0f))
 //		glBlitNamedFramebuffer()
-
-		glBindTextureUnit(0, testTexture.handle)
-		autoQuadShader.bind()
-		dummy.bind()
-//		glDrawArrays(GL_TRIANGLES, 0, 3)
 
 		transform.apply {
 			identity()
 			perspective(70f, winWide.toFloat()/winTall, 0.001f, 100f)
-			rotateX((cos(time * PI) * 0.1).toFloat())
+			rotateX((cos(time * PI) * 45.0).toRadiansf())
 			rotateY((time * PI / 2.0).toFloat())
 			get(matrixSegment, 0L)
 			nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
 		}
 
+		glBindTextureUnit(0, testTexture.handle)
 		tessTestShader.bind()
 		val uhh = glGetUniformBlockIndex(tessTestShader.vr, "MATRICES")
 		glUniformBlockBinding(tessTestShader.vr, uhh, 0)
@@ -205,5 +196,5 @@ fun main (vararg args: String)
 		pevWindowSize.set(windowSize)
 	}
 
-	glfwTerminate()
+	WindowManager.close()
 }

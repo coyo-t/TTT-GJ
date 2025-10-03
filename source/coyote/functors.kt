@@ -2,14 +2,11 @@ package coyote
 
 import coyote.geom.VertexFormat
 import coyote.geom.VertexFormatBuilder
-import coyote.resource.ResourceLocation
 import org.joml.Math.clamp
 import org.joml.Matrix4fc
 import org.joml.Vector3d
-import org.lwjgl.glfw.GLFW.glfwGetError
 import org.lwjgl.opengl.GL45C.*
 import org.lwjgl.opengl.GLDebugMessageCallback
-import org.lwjgl.system.MemoryStack.stackPush
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout.JAVA_FLOAT
 import java.nio.ByteBuffer
@@ -45,12 +42,6 @@ fun glTypeByteSize (type: Int): Long
 		GL_FLOAT -> 4
 		else -> throw IllegalArgumentException()
 	}
-}
-
-fun getWindowManagerError () = stackPush().use { stack ->
-	val name = stack.mallocPointer(1)
-	val errc = glfwGetError(name)
-	name.stringASCII to errc
 }
 
 fun rendererDebugMessage (source:Int, type:Int, id:Int, severity:Int, mLen:Int, mPtr:Long, ud:Long)
@@ -140,6 +131,9 @@ fun applyVertexFormat (format: VertexFormat, vaoHandle: Int)
 		)
 	}
 }
+
+fun Double.toRadians () = Math.toRadians(this)
+fun Double.toRadiansf () = this.toRadians().toFloat()
 
 fun Matrix4fc.get (into: MemorySegment, offset: Long)
 {
