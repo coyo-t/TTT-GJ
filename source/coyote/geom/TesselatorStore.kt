@@ -23,21 +23,22 @@ class TesselatorStore(
 
 	fun submit (pr:Int)
 	{
-		if (vertexCount == 0)
-			return
-		if (vao < 0)
+		if (vertexCount != 0)
 		{
-			vao = glCreateVertexArrays()
-			vb = glCreateBuffers()
-			ib = glCreateBuffers()
-			nglNamedBufferStorage(vb, vertexByteSize, data.address(), 0)
-			nglNamedBufferStorage(ib, indexByteSize, data.address()+indexRange.first, 0)
-			glVertexArrayVertexBuffer(vao, 0, vb, 0L, format.byteSize)
-			glVertexArrayElementBuffer(vao, ib)
-			applyVertexFormat(format, vao)
+			if (vao < 0)
+			{
+				vao = glCreateVertexArrays()
+				vb = glCreateBuffers()
+				ib = glCreateBuffers()
+				nglNamedBufferStorage(vb, vertexByteSize, data.address(), 0)
+				nglNamedBufferStorage(ib, indexByteSize, data.address()+indexRange.first, 0)
+				glVertexArrayVertexBuffer(vao, 0, vb, 0L, format.byteSize)
+				glVertexArrayElementBuffer(vao, ib)
+				applyVertexFormat(format, vao)
+			}
+			glBindVertexArray(vao)
+			glDrawElements(pr, indexCount, GL_UNSIGNED_INT, 0)
 		}
-		glBindVertexArray(vao)
-		glDrawElements(pr, indexCount, GL_UNSIGNED_INT, 0)
 	}
 
 	override fun close()

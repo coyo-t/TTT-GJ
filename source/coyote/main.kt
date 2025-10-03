@@ -179,6 +179,8 @@ fun main (vararg args: String)
 	var currentShader: CompiledShaders.ShaderPipeline? = null
 	fun submit (tess: TesselatorStore, pr:Int)
 	{
+		if (tess.vertexCount <= 0)
+			return
 		val currentShader = currentShader ?: return
 		transform.get(matrixSegment, 0L)
 		nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
