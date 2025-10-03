@@ -2,7 +2,6 @@ package coyote
 
 import coyote.geom.VertexFormat
 import coyote.geom.VertexFormatBuilder
-import org.joml.Math.clamp
 import org.joml.Matrix4fc
 import org.joml.Vector3d
 import org.lwjgl.opengl.GL45C.*
@@ -20,7 +19,11 @@ import kotlin.math.floor
 
 
 fun Double.floorToInt () = floor(this).toInt()
-fun Double.floorToInt (min:Int, max:Int) = clamp(floorToInt(), min, max)
+fun Double.floorToInt (min:Int, max:Int) = Math.clamp(floorToInt().toLong(), min, max)
+fun Double.clamped (doubleRange: ClosedRange<Double>)
+	= Math.clamp(this, doubleRange.start, doubleRange.endInclusive)
+fun Double.clampedSym (radius:Double)
+	= Math.clamp(this, -radius, +radius)
 
 fun Vector3d.set (x:Number, y:Number, z:Number): Vector3d
 	= set(x.toDouble(), y.toDouble(), z.toDouble())

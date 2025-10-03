@@ -1,12 +1,22 @@
 package coyote
 
 import org.joml.Vector2ic
+import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.system.MemoryStack.stackPush
 
 object WindowManager
 {
 	private var initialized = false
+
+	val canUseRawMouseAcceleration by lazy {
+		glfwRawMouseMotionSupported()
+	}
+
+	var time: Double
+		get() = glfwGetTime()
+		set(v) { glfwSetTime(v) }
+
 	fun init ()
 	{
 		check(!initialized) { "already initialized" }
@@ -28,6 +38,11 @@ object WindowManager
 		check(initialized) { "not initialized" }
 		glfwTerminate()
 		initialized = false
+	}
+
+	fun pollEvents ()
+	{
+		glfwPollEvents()
 	}
 
 	fun createWindow (title:String, size:Vector2ic): Long

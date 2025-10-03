@@ -8,11 +8,14 @@ import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
 import org.joml.Matrix4fStack
+import org.joml.Vector2d
 import org.joml.Vector2i
+import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL46C.*
 import org.lwjgl.system.Configuration
+import org.lwjgl.system.MemoryStack.stackPush
 import java.awt.Color
 import java.lang.foreign.Arena
 import java.lang.foreign.ValueLayout.JAVA_FLOAT
@@ -74,8 +77,20 @@ fun main (vararg args: String)
 	glfwMakeContextCurrent(windowHandle)
 	GL.createCapabilities()
 
+	glfwSetInputMode(windowHandle, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE)
+
+	val pevMouseCo = Vector2d()
+	val curMouseCo = Vector2d()
+	val mouseDelta = Vector2d()
+	var windowHasFocus = true
+	var pevWindowHasFocus = windowHasFocus
+
 	glfwSetWindowSizeCallback(windowHandle) { _, w, h ->
 		windowSize.set(w, h)
+	}
+
+	glfwSetWindowFocusCallback(windowHandle) { _, focused ->
+		windowHasFocus = focused
 	}
 
 	println(":)")
@@ -83,10 +98,7 @@ fun main (vararg args: String)
 	glEnable(GL_DEBUG_OUTPUT)
 	glDebugMessageCallback(::rendererDebugMessage, 0L)
 
-	val autoQuadShader = SHADERZ[ResourceLocation.of("shader/test auto.lua")]
 	val tessTestShader = SHADERZ[ResourceLocation.of("shader/test.lua")]
-
-	val dummy = GPUVertexArray(VertexFormat.NON)
 
 	val matrixBuffer = glCreateBuffers()
 	val matrixBufferSize = ((4*4)*4L)*3
@@ -101,7 +113,6 @@ fun main (vararg args: String)
 	matrixSegment.setAtIndex(JAVA_FLOAT, 5L, 1f)
 	matrixSegment.setAtIndex(JAVA_FLOAT, 11L, 1f)
 	matrixSegment.setAtIndex(JAVA_FLOAT, 15L, 1f)
-	val matrixNIO = matrixSegment.asByteBuffer()
 
 //	val surface = glCreateFramebuffers()
 	val tess = Tesselator()
@@ -163,11 +174,33 @@ fun main (vararg args: String)
 		end(tessSaver)
 	}
 
+	var viewPitch = 0.0
+	var viewYaw = 0.0
+	var viewSens = 1.0 / 8.0
+	var mouseGrabbed = true
+
+
+	glfwSetInputMode(windowHandle, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
 	glfwShowWindow(windowHandle)
 	while (!glfwWindowShouldClose(windowHandle))
 	{
-		glfwPollEvents()
-		val time = glfwGetTime()
+		pevMouseCo.set(curMouseCo)
+		pevWindowHasFocus = windowHasFocus
+		WindowManager.pollEvents()
+		stackPush().use { stack ->
+			val x = stack.mallocDouble(1)
+			val y = stack.mallocDouble(1)
+			glfwGetCursorPos(windowHandle, x, y)
+			curMouseCo.set(x.get(), y.get())
+			curMouseCo.sub(pevMouseCo, mouseDelta)
+		}
+
+
+
+		viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
+		viewYaw = viewYaw + mouseDelta.x * viewSens
+
+		val time = WindowManager.time
 
 		val winWide = windowSize.x
 		val winTall = windowSize.y
@@ -179,8 +212,8 @@ fun main (vararg args: String)
 		transform.apply {
 			identity()
 			perspective(70f, winWide.toFloat()/winTall, 0.001f, 100f)
-			rotateX((cos(time * PI) * 45.0).toRadiansf())
-			rotateY((time * PI / 2.0).toFloat())
+			rotateX(viewPitch.toRadiansf())
+			rotateY(viewYaw.toRadiansf())
 			get(matrixSegment, 0L)
 			nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
 		}
