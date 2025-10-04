@@ -22,6 +22,8 @@ import kotlin.jvm.optionals.getOrNull
 @PublishedApi internal val globalTess = Tesselator()
 @PublishedApi internal val globalTessSubmitter = RenderSubmittingTessDigester()
 
+var isInitialized = false
+	private set
 private val currentSurfaceHandle get() = currentSurfaceTarget?.handle ?: 0
 var currentSurfaceTarget: Surface? = null
 	private set
@@ -91,7 +93,11 @@ fun drawCreateSurface (w:Int, h:Int): Surface
 	TODO()
 }
 
-fun drawCreateCapabilities () = GL.createCapabilities().also { currentCapabilities=it }
+fun drawInitialize ()
+{
+	currentCapabilities = GL.createCapabilities()
+	isInitialized = true
+}
 
 
 fun drawSubmit (vao:Int, pr:Int, indexCount:Int)

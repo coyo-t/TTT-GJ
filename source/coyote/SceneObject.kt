@@ -1,11 +1,20 @@
 package coyote
 
-import org.joml.Matrix4f
+import org.joml.Vector3d
 
-class SceneObject
+open class SceneObject
 {
-	var step: ((Scene) -> Boolean)? = null
-	var prepareForRender: ((Scene)-> Boolean)? = null
-	var applyRenderTransform: ((Scene, Matrix4f)->Unit)? = null
-	var draw: ((Scene)->Unit)? = null
+	var location = Vector3d()
+
+	open var visible: Boolean = true
+	var renderPriority = 0
+
+	open fun step (scene: Scene)
+	{
+	}
+
+	open fun draw (scene: Scene)
+	{
+	}
+
 }

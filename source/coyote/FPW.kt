@@ -7,7 +7,7 @@ import coyote.window.Window
 import coyote.window.WindowHint
 import coyote.window.WindowManager
 import org.joml.Math.lerp
-import org.joml.Matrix4f
+import org.joml.Matrix4fStack
 import org.joml.Vector2d
 import org.joml.Vector2i
 import org.joml.Vector3d
@@ -87,13 +87,11 @@ class FPW: AutoCloseable
 
 	private var firstFrame = true
 
-	val viewpoint = SceneObject()
-	val viewMatrix = Matrix4f()
+	val projectionMatrix = Matrix4fStack(8)
+	val viewMatrix = Matrix4fStack(16)
+	val worldMatrix = Matrix4fStack(32)
 
-	val scene = Scene().also {
-		it.viewpoint = viewpoint
-	}
-
+	val scene = Scene()
 
 	val window: Window
 	init
@@ -138,9 +136,6 @@ class FPW: AutoCloseable
 		SHADERZ[ResourceLocation.of("shader/mesh test.lua")]
 	}
 
-	val textureTest_labyrinthOctoEnv by lazy {
-		TEXTUREZ[ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")]
-	}
 	val textureTest_screenTri by lazy {
 		TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
 	}
@@ -166,56 +161,6 @@ class FPW: AutoCloseable
 
 	fun init ()
 	{
-		scene.objects += viewpoint.apply {
-			step = { _ ->
-				if (mouseGrabbed)
-				{
-					viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
-					viewYaw = viewYaw + mouseDelta.x * viewSens
-
-					inputVec.x += if (inputMap[GLFW_KEY_D] == true) 1.0 else 0.0
-					inputVec.x -= if (inputMap[GLFW_KEY_A] == true) 1.0 else 0.0
-					inputVec.z -= if (inputMap[GLFW_KEY_W] == true) 1.0 else 0.0
-					inputVec.z += if (inputMap[GLFW_KEY_S] == true) 1.0 else 0.0
-					inputVec.y += if (inputMap[GLFW_KEY_SPACE] == true) 1.0 else 0.0
-					inputVec.y -= if (inputMap[GLFW_KEY_LEFT_SHIFT] == true) 1.0 else 0.0
-
-					if (inputVec.x != 0.0 || inputVec.y != 0.0 || inputVec.z != 0.0)
-					{
-						inputVec.normalize()
-						inputVec.rotateY(-viewYaw.toRadians())
-						inputVec.mulAdd(deltaTime * 2.0, viewCo, viewCo)
-					}
-				}
-				true
-			}
-			applyRenderTransform = { _, mat ->
-				with (mat)
-				{
-					identity()
-					translate(viewCo.x.toFloat(), viewCo.y.toFloat(), viewCo.z.toFloat())
-					rotateY(-viewYaw.toRadiansf())
-					rotateX(-viewPitch.toRadiansf())
-				}
-			}
-		}
-		scene.objects += SceneObject().apply {
-			// env
-			draw = { _ ->
-				drawSetShader(shaderTest_storedOBJ)
-				drawBindTexture(0, textureTest_labyrinthOctoEnv)
-				drawBindTexture(1, testRenderTargetTexture)
-				drawSubmit(testSavedModel, GL_TRIANGLES)
-			}
-		}
-		scene.objects += SceneObject().apply {
-			// compass
-			draw = { _ ->
-				drawSetShader(shaderTest_uniformBlocks)
-				drawBindTexture(0, TEXTUREZ[TEXTURE_WHITE])
-				drawSubmit(modelTest_compass, GL_LINES)
-			}
-		}
 		window.setRawMouseMotion(true)
 		glfwSetWindowSizeCallback(window.handle) { _, w, h ->
 			windowSize.set(w, h)
@@ -239,7 +184,7 @@ class FPW: AutoCloseable
 		}
 
 		window.makeContextCurrent()
-		drawCreateCapabilities()
+		drawInitialize()
 		drawSetFlag(GL_DEBUG_OUTPUT, true)
 		drawSetDebugMessageCallback(0L, ::rendererDebugMessage)
 
@@ -252,6 +197,67 @@ class FPW: AutoCloseable
 		drawSetDepthCompareFunc(GL_LESS)
 		drawSetCullingSide(GL_BACK)
 		drawSetCullingEnabled(true)
+
+		// viewpoint
+		scene.objects += object : SceneObject() {
+			override fun step(scene: Scene)
+			{
+				if (mouseGrabbed)
+				{
+					viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
+					viewYaw = viewYaw + mouseDelta.x * viewSens
+
+					inputVec.x += if (inputMap[GLFW_KEY_D] == true) 1.0 else 0.0
+					inputVec.x -= if (inputMap[GLFW_KEY_A] == true) 1.0 else 0.0
+					inputVec.z -= if (inputMap[GLFW_KEY_W] == true) 1.0 else 0.0
+					inputVec.z += if (inputMap[GLFW_KEY_S] == true) 1.0 else 0.0
+					inputVec.y += if (inputMap[GLFW_KEY_SPACE] == true) 1.0 else 0.0
+					inputVec.y -= if (inputMap[GLFW_KEY_LEFT_SHIFT] == true) 1.0 else 0.0
+
+					if (inputVec.x != 0.0 || inputVec.y != 0.0 || inputVec.z != 0.0)
+					{
+						inputVec.normalize()
+						inputVec.rotateY(-viewYaw.toRadians())
+						inputVec.mulAdd(deltaTime * 2.0, viewCo, viewCo)
+					}
+				}
+			}
+
+			override fun draw(scene: Scene)
+			{
+				with (drawGlobalTransform)
+				{
+					identity()
+					perspective(70f, windowSize.x.toFloat() / windowSize.y, 0.001f, 100f)
+					rotateX(viewPitch.toRadiansf())
+					rotateY(viewYaw.toRadiansf())
+					translate(-viewCo.x.toFloat(), -viewCo.y.toFloat(), -viewCo.z.toFloat())
+				}
+			}
+			init {
+				renderPriority = -9999
+			}
+		}
+		// env
+		scene.objects += object : SceneObject() {
+			val texName = ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")
+			override fun draw(scene: Scene)
+			{
+				drawSetShader(shaderTest_storedOBJ)
+				drawBindTexture(0, TEXTUREZ[texName])
+				drawBindTexture(1, testRenderTargetTexture)
+				drawSubmit(testSavedModel, GL_TRIANGLES)
+			}
+		}
+		// compass
+		scene.objects += object : SceneObject() {
+			override fun draw(scene: Scene)
+			{
+				drawSetShader(shaderTest_uniformBlocks)
+				drawBindTexture(0, TEXTUREZ[TEXTURE_WHITE])
+				drawSubmit(modelTest_compass, GL_LINES)
+			}
+		}
 	}
 
 	fun draw ()
@@ -295,14 +301,6 @@ class FPW: AutoCloseable
 		drawSetViewPort(winWide, winTall)
 		drawClearDepth(1)
 
-		drawGlobalTransform.apply {
-			identity()
-			perspective(70f, winWide.toFloat() / winTall, 0.001f, 100f)
-			scene.applyViewpointTransform(viewMatrix)
-			mul(viewMatrix, this)
-		}
-
-		scene.prepareObjectsForRendering()
 		scene.renderObjects()
 
 		drawBlitSurfaces(
@@ -338,7 +336,7 @@ class FPW: AutoCloseable
 		if (!windowHasFocus)
 			mouseGrabbedness(false)
 
-		scene.objects.forEach { it.step?.invoke(scene) }
+		scene.stepObjects()
 	}
 
 	override fun close()

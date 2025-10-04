@@ -9,7 +9,6 @@ import org.joml.Vector2d
 import org.joml.Vector3d
 import java.awt.Color
 import java.nio.file.Files
-import kotlin.collections.plusAssign
 
 class OBJModelManager(val resourceManager: ResourceManager)
 {
@@ -34,6 +33,7 @@ class OBJModelManager(val resourceManager: ResourceManager)
 			val locations = mutableListOf<Vector3d>()
 			val textures = mutableListOf<Vector2d>()
 			val normals = mutableListOf<Vector3d>()
+			val colors = mutableListOf<Color>()
 
 			val indices = mutableListOf<IntArray>()
 			val vertexCounts = mutableListOf<Int>()
@@ -64,6 +64,7 @@ class OBJModelManager(val resourceManager: ResourceManager)
 					for (j in 0..<fc)
 					{
 						val (v,vt,vn) = indices[indexCounter]
+
 						color(Color.WHITE)
 						if (vn >= 0)
 						{
