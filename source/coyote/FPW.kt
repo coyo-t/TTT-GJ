@@ -20,7 +20,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-class FPW
+class FPW: AutoCloseable
 {
 	val TEXTURE_TRANSPARENT = ResourceLocation.of("texture/transparent")
 	val TEXTURE_BLACK = ResourceLocation.of("texture/black")
@@ -85,6 +85,8 @@ class FPW
 	var pevTime = time
 	var deltaTime = time - pevTime
 
+	private var firstFrame = true
+
 	val window: Window
 	init
 	{
@@ -121,44 +123,6 @@ class FPW
 			window.setCursorMode(GLFW_CURSOR_NORMAL)
 	}
 
-	fun init ()
-	{
-		window.setRawMouseMotion(true)
-		glfwSetWindowSizeCallback(window.handle) { _, w, h ->
-			windowSize.set(w, h)
-		}
-
-		glfwSetWindowFocusCallback(window.handle) { _, focused ->
-			windowHasFocus = focused
-		}
-		glfwSetKeyCallback(window.handle) { _, key, scancode, action, mods ->
-			if (action == GLFW_PRESS)
-				inputMap[key] = true
-			else if (action == GLFW_RELEASE)
-				inputMap[key] = false
-			when (key)
-			{
-				GLFW_KEY_ESCAPE if (action == GLFW_PRESS) -> mouseGrabbedness(!mouseGrabbed)
-			}
-		}
-
-		window.makeContextCurrent()
-		drawCreateCapabilities()
-		drawSetFlag(GL_DEBUG_OUTPUT, true)
-		drawSetDebugMessageCallback(0L, ::rendererDebugMessage)
-
-		Arena.ofConfined().use { arena ->
-			val pm = arena.allocate(16*16*4)
-			pm.fill(0xFF.toByte())
-			val pic = NativeImage(16, 16, pm)
-			TEXTUREZ.add(TEXTURE_WHITE, pic)
-		}
-		drawSetDepthCompareFunc(GL_LESS)
-		drawSetCullingSide(GL_BACK)
-		drawSetCullingEnabled(true)
-		window.show()
-	}
-
 	val shaderTest_uniformBlocks by lazy {
 		SHADERZ[ResourceLocation.of("shader/test.lua")]
 	}
@@ -192,51 +156,48 @@ class FPW
 		TEXTUREZ[ResourceLocation.of("texture/color calibration card.kra")]
 	}
 
-	fun preStep ()
+	fun init ()
 	{
-		pevTime = time
-		pevMouseCo.set(curMouseCo)
-		pevWindowSize.set(windowSize)
-		inputVec.set(0.0)
-	}
-
-	fun step ()
-	{
-		if (window.shouldClose)
-			throw StopGame()
-		time = WindowManager.time
-		deltaTime = time - pevTime
-
-		stackPush().use { stack ->
-			val x = stack.mallocDouble(1)
-			val y = stack.mallocDouble(1)
-			glfwGetCursorPos(window.handle, x, y)
-			curMouseCo.set(x.get(), y.get())
-			curMouseCo.sub(pevMouseCo, mouseDelta)
+		window.setRawMouseMotion(true)
+		glfwSetWindowSizeCallback(window.handle) { _, w, h ->
+			windowSize.set(w, h)
+			draw()
 		}
-		if (!windowHasFocus)
-			mouseGrabbedness(false)
+		glfwSetFramebufferSizeCallback(window.handle) { _, w, h ->
+		}
 
-		if (mouseGrabbed)
-		{
-			viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
-			viewYaw = viewYaw + mouseDelta.x * viewSens
-
-			inputVec.x += if (inputMap[GLFW_KEY_D] == true) 1.0 else 0.0
-			inputVec.x -= if (inputMap[GLFW_KEY_A] == true) 1.0 else 0.0
-			inputVec.z -= if (inputMap[GLFW_KEY_W] == true) 1.0 else 0.0
-			inputVec.z += if (inputMap[GLFW_KEY_S] == true) 1.0 else 0.0
-			inputVec.y += if (inputMap[GLFW_KEY_SPACE] == true) 1.0 else 0.0
-			inputVec.y -= if (inputMap[GLFW_KEY_LEFT_SHIFT] == true) 1.0 else 0.0
-
-			if (inputVec.x != 0.0 || inputVec.y != 0.0 || inputVec.z != 0.0)
+		glfwSetWindowFocusCallback(window.handle) { _, focused ->
+			windowHasFocus = focused
+		}
+		glfwSetKeyCallback(window.handle) { _, key, scancode, action, mods ->
+			if (action == GLFW_PRESS)
+				inputMap[key] = true
+			else if (action == GLFW_RELEASE)
+				inputMap[key] = false
+			when (key)
 			{
-				inputVec.normalize()
-				inputVec.rotateY(-viewYaw.toRadians())
-				inputVec.mulAdd(deltaTime * 2.0, viewCo, viewCo)
+				GLFW_KEY_ESCAPE if (action == GLFW_PRESS) -> mouseGrabbedness(!mouseGrabbed)
 			}
 		}
 
+		window.makeContextCurrent()
+		drawCreateCapabilities()
+		drawSetFlag(GL_DEBUG_OUTPUT, true)
+		drawSetDebugMessageCallback(0L, ::rendererDebugMessage)
+
+		Arena.ofConfined().use { arena ->
+			val pm = arena.allocate(16*16*4)
+			pm.fill(0xFF.toByte())
+			val pic = NativeImage(16, 16, pm)
+			TEXTUREZ.add(TEXTURE_WHITE, pic)
+		}
+		drawSetDepthCompareFunc(GL_LESS)
+		drawSetCullingSide(GL_BACK)
+		drawSetCullingEnabled(true)
+	}
+
+	fun draw ()
+	{
 		val winWide = windowSize.x
 		val winTall = windowSize.y
 		drawToSurface(testSurface) {
@@ -298,6 +259,62 @@ class FPW
 			GL_COLOR_BUFFER_BIT,
 			GL_LINEAR,
 		)
+
+		if (firstFrame)
+		{
+			window.show()
+			firstFrame = false
+		}
 		window.swapBuffers()
+	}
+
+	fun preStep ()
+	{
+		pevTime = time
+		pevMouseCo.set(curMouseCo)
+		pevWindowSize.set(windowSize)
+		inputVec.set(0.0)
+	}
+
+	fun step ()
+	{
+		if (window.shouldClose)
+			throw StopGame()
+		time = WindowManager.time
+		deltaTime = time - pevTime
+
+		stackPush().use { stack ->
+			val x = stack.mallocDouble(1)
+			val y = stack.mallocDouble(1)
+			glfwGetCursorPos(window.handle, x, y)
+			curMouseCo.set(x.get(), y.get())
+			curMouseCo.sub(pevMouseCo, mouseDelta)
+		}
+		if (!windowHasFocus)
+			mouseGrabbedness(false)
+
+		if (mouseGrabbed)
+		{
+			viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
+			viewYaw = viewYaw + mouseDelta.x * viewSens
+
+			inputVec.x += if (inputMap[GLFW_KEY_D] == true) 1.0 else 0.0
+			inputVec.x -= if (inputMap[GLFW_KEY_A] == true) 1.0 else 0.0
+			inputVec.z -= if (inputMap[GLFW_KEY_W] == true) 1.0 else 0.0
+			inputVec.z += if (inputMap[GLFW_KEY_S] == true) 1.0 else 0.0
+			inputVec.y += if (inputMap[GLFW_KEY_SPACE] == true) 1.0 else 0.0
+			inputVec.y -= if (inputMap[GLFW_KEY_LEFT_SHIFT] == true) 1.0 else 0.0
+
+			if (inputVec.x != 0.0 || inputVec.y != 0.0 || inputVec.z != 0.0)
+			{
+				inputVec.normalize()
+				inputVec.rotateY(-viewYaw.toRadians())
+				inputVec.mulAdd(deltaTime * 2.0, viewCo, viewCo)
+			}
+		}
+	}
+
+	override fun close()
+	{
 	}
 }

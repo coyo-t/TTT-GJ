@@ -12,23 +12,23 @@ val DATA_PATH = RESOURCE_PATH/"data"
 
 fun main (vararg args: String)
 {
-	// this is precarious >:/
-	val LP = DATA_PATH/"dll/"
-	loadSystemLibrary(LP/"lua5464.dll")
-	Configuration.LIBRARY_PATH.set((LP/"org/lwjgl").normalize().toAbsolutePath().invariantSeparatorsPathString)
-	WindowManager.init()
-
-	println(":)")
-	val game = FPW()
-	game.init()
-
+	var game: FPW? = null
 	try
 	{
+		// this is precarious >:/
+		val LP = DATA_PATH/"dll/"
+		loadSystemLibrary(LP/"lua5464.dll")
+		Configuration.LIBRARY_PATH.set((LP/"org/lwjgl").normalize().toAbsolutePath().invariantSeparatorsPathString)
+		WindowManager.init()
+		println(":)")
+		game = FPW()
+		game.init()
 		while (true)
 		{
 			game.preStep()
 			WindowManager.pollEvents()
 			game.step()
+			game.draw()
 		}
 	}
 	catch (_: StopGame)
@@ -42,6 +42,10 @@ fun main (vararg args: String)
 	{
 		e.printStackTrace()
 	}
+	finally
+	{
+		game?.close()
+		WindowManager.close()
+	}
 
-	WindowManager.close()
 }

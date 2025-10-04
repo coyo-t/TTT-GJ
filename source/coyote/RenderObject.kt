@@ -1,0 +1,5 @@
+package coyote
+
+class RenderObject
+{
+}

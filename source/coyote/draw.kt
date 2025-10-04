@@ -13,9 +13,11 @@ import org.lwjgl.opengl.GLDebugMessageCallbackI
 import java.awt.Color
 import java.lang.foreign.Arena
 import java.lang.foreign.ValueLayout.JAVA_FLOAT
+import java.util.Optional
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.jvm.optionals.getOrNull
 
 @PublishedApi internal val globalTess = Tesselator()
 @PublishedApi internal val globalTessSubmitter = RenderSubmittingTessDigester()
@@ -35,6 +37,7 @@ private val matrixSegment = Arena.ofAuto().allocate(matrixBufferSize).apply {
 	setAtIndex(JAVA_FLOAT, 11L, 1f)
 	setAtIndex(JAVA_FLOAT, 15L, 1f)
 }
+private var shaderMatrixHandleTable = mutableMapOf<Int, Optional<Int>>()
 
 // lazy variable as glCreateBuffers cant be used before context is set
 private val matrixBuffer by lazy {
@@ -100,9 +103,16 @@ fun drawSubmit (vao:Int, pr:Int, indexCount:Int, type:Int, offset:Long=0L)
 	val currentShader = currentShader ?: return
 	drawGlobalTransform.get(matrixSegment, 0L)
 	nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
-	val uhh = glGetUniformBlockIndex(currentShader.vr, "MATRICES")
-	glUniformBlockBinding(currentShader.vr, uhh, 0)
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixBuffer)
+	shaderMatrixHandleTable.getOrPut(currentShader.vr) {
+		val m = glGetUniformBlockIndex(currentShader.vr, "MATRICES")
+		if (m < 0)
+			Optional.empty()
+		else
+			Optional.of(m)
+	}.getOrNull()?.let { uhh ->
+		glUniformBlockBinding(currentShader.vr, uhh, 0)
+		glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixBuffer)
+	}
 	glBindVertexArray(vao)
 	glDrawElements(pr, indexCount, type, offset)
 }
