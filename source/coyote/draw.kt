@@ -114,7 +114,7 @@ fun drawSubmit (tess: TesselatorStore, pr:Int)
 	drawSubmit(tess.getVAO(), pr, tess.indexCount)
 }
 
-fun drawSetState (what:Int, to: Boolean)
+fun drawSetFlag (what:Int, to: Boolean)
 {
 	if (to)
 		glEnable(what)
@@ -131,7 +131,7 @@ fun drawSetDepthCompareFunc (to: Int)
 }
 fun drawSetDepthTestEnable (to: Boolean)
 {
-	drawSetState(GL_DEPTH_TEST, to)
+	drawSetFlag(GL_DEPTH_TEST, to)
 }
 fun drawSetDepthWriteEnable (to: Boolean)
 {
@@ -186,3 +186,19 @@ fun drawClearDepth (d: Number)
 {
 	glClearNamedFramebufferfv(currentSurfaceHandle, GL_DEPTH, 0, floatArrayOf(d.toFloat()))
 }
+
+fun drawSetCullingEnabled (d: Boolean)
+{
+	drawSetFlag(GL_CULL_FACE, d)
+}
+
+fun drawSetCullingSide (w:Int)
+{
+	glCullFace(w)
+}
+
+fun drawSetWindingOrder (w:Int)
+{
+	glFrontFace(w)
+}
+

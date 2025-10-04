@@ -8,9 +8,18 @@ class Surface (val handle: Int)
 	private var colorRenderBuffer = 0
 	private var depthRenderBuffer = 0
 
-	fun setColorAttachment (at:Int, texture: Texture, mipLevel:Int=0)
+	fun setColorAttachment (texture: Texture, mipLevel:Int=0)
 	{
-		glNamedFramebufferTexture(handle, GL_COLOR_ATTACHMENT0 + at, texture.handle, mipLevel)
+		glNamedFramebufferTexture(handle, GL_COLOR_ATTACHMENT0, texture.handle, mipLevel)
+	}
+
+	fun setColorAttachment (wide:Int, tall:Int)
+	{
+		if (colorRenderBuffer > 0) glDeleteRenderbuffers(colorRenderBuffer)
+		colorRenderBuffer = glCreateRenderbuffers()
+		glNamedRenderbufferStorage(colorRenderBuffer, GL_COLOR_COMPONENTS, wide, tall)
+		glNamedFramebufferRenderbuffer(handle, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, colorRenderBuffer)
+
 	}
 
 	fun setDepthAttachment (wide:Int, tall:Int)
