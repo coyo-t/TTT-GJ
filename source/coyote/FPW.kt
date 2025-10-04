@@ -7,13 +7,13 @@ import coyote.window.Window
 import coyote.window.WindowHint
 import coyote.window.WindowManager
 import org.joml.Math.lerp
+import org.joml.Matrix4f
 import org.joml.Vector2d
 import org.joml.Vector2i
 import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL11C.*
 import org.lwjgl.opengl.GL46C.GL_DEBUG_OUTPUT
-import org.lwjgl.system.MemoryStack.stackPush
 import java.awt.Color
 import java.lang.foreign.Arena
 import kotlin.math.PI
@@ -87,6 +87,14 @@ class FPW: AutoCloseable
 
 	private var firstFrame = true
 
+	val viewpoint = SceneObject()
+	val viewMatrix = Matrix4f()
+
+	val scene = Scene().also {
+		it.viewpoint = viewpoint
+	}
+
+
 	val window: Window
 	init
 	{
@@ -158,6 +166,56 @@ class FPW: AutoCloseable
 
 	fun init ()
 	{
+		scene.objects += viewpoint.apply {
+			step = { _ ->
+				if (mouseGrabbed)
+				{
+					viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
+					viewYaw = viewYaw + mouseDelta.x * viewSens
+
+					inputVec.x += if (inputMap[GLFW_KEY_D] == true) 1.0 else 0.0
+					inputVec.x -= if (inputMap[GLFW_KEY_A] == true) 1.0 else 0.0
+					inputVec.z -= if (inputMap[GLFW_KEY_W] == true) 1.0 else 0.0
+					inputVec.z += if (inputMap[GLFW_KEY_S] == true) 1.0 else 0.0
+					inputVec.y += if (inputMap[GLFW_KEY_SPACE] == true) 1.0 else 0.0
+					inputVec.y -= if (inputMap[GLFW_KEY_LEFT_SHIFT] == true) 1.0 else 0.0
+
+					if (inputVec.x != 0.0 || inputVec.y != 0.0 || inputVec.z != 0.0)
+					{
+						inputVec.normalize()
+						inputVec.rotateY(-viewYaw.toRadians())
+						inputVec.mulAdd(deltaTime * 2.0, viewCo, viewCo)
+					}
+				}
+				true
+			}
+			applyRenderTransform = { _, mat ->
+				with (mat)
+				{
+					identity()
+					translate(viewCo.x.toFloat(), viewCo.y.toFloat(), viewCo.z.toFloat())
+					rotateY(-viewYaw.toRadiansf())
+					rotateX(-viewPitch.toRadiansf())
+				}
+			}
+		}
+		scene.objects += SceneObject().apply {
+			// env
+			draw = { _ ->
+				drawSetShader(shaderTest_storedOBJ)
+				drawBindTexture(0, textureTest_labyrinthOctoEnv)
+				drawBindTexture(1, testRenderTargetTexture)
+				drawSubmit(testSavedModel, GL_TRIANGLES)
+			}
+		}
+		scene.objects += SceneObject().apply {
+			// compass
+			draw = { _ ->
+				drawSetShader(shaderTest_uniformBlocks)
+				drawBindTexture(0, TEXTUREZ[TEXTURE_WHITE])
+				drawSubmit(modelTest_compass, GL_LINES)
+			}
+		}
 		window.setRawMouseMotion(true)
 		glfwSetWindowSizeCallback(window.handle) { _, w, h ->
 			windowSize.set(w, h)
@@ -236,22 +294,16 @@ class FPW: AutoCloseable
 		drawSetDepthWriteEnable(true)
 		drawSetViewPort(winWide, winTall)
 		drawClearDepth(1)
+
 		drawGlobalTransform.apply {
 			identity()
 			perspective(70f, winWide.toFloat() / winTall, 0.001f, 100f)
-			rotateX(viewPitch.toRadiansf())
-			rotateY(viewYaw.toRadiansf())
-			translate(-viewCo.x.toFloat(), -viewCo.y.toFloat(), -viewCo.z.toFloat())
+			scene.applyViewpointTransform(viewMatrix)
+			mul(viewMatrix, this)
 		}
 
-		drawSetShader(shaderTest_storedOBJ)
-		drawBindTexture(0, textureTest_labyrinthOctoEnv)
-		drawBindTexture(1, testRenderTargetTexture)
-		drawSubmit(testSavedModel, GL_TRIANGLES)
-
-		drawSetShader(shaderTest_uniformBlocks)
-		drawBindTexture(0, TEXTUREZ[TEXTURE_WHITE])
-		drawSubmit(modelTest_compass, GL_LINES)
+		scene.prepareObjectsForRendering()
+		scene.renderObjects()
 
 		drawBlitSurfaces(
 			testSurface, 0, 0, 256, 256,
@@ -282,36 +334,11 @@ class FPW: AutoCloseable
 			throw StopGame()
 		time = WindowManager.time
 		deltaTime = time - pevTime
-
-		stackPush().use { stack ->
-			val x = stack.mallocDouble(1)
-			val y = stack.mallocDouble(1)
-			glfwGetCursorPos(window.handle, x, y)
-			curMouseCo.set(x.get(), y.get())
-			curMouseCo.sub(pevMouseCo, mouseDelta)
-		}
+		window.getCursorLocation(curMouseCo).sub(pevMouseCo, mouseDelta)
 		if (!windowHasFocus)
 			mouseGrabbedness(false)
 
-		if (mouseGrabbed)
-		{
-			viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
-			viewYaw = viewYaw + mouseDelta.x * viewSens
-
-			inputVec.x += if (inputMap[GLFW_KEY_D] == true) 1.0 else 0.0
-			inputVec.x -= if (inputMap[GLFW_KEY_A] == true) 1.0 else 0.0
-			inputVec.z -= if (inputMap[GLFW_KEY_W] == true) 1.0 else 0.0
-			inputVec.z += if (inputMap[GLFW_KEY_S] == true) 1.0 else 0.0
-			inputVec.y += if (inputMap[GLFW_KEY_SPACE] == true) 1.0 else 0.0
-			inputVec.y -= if (inputMap[GLFW_KEY_LEFT_SHIFT] == true) 1.0 else 0.0
-
-			if (inputVec.x != 0.0 || inputVec.y != 0.0 || inputVec.z != 0.0)
-			{
-				inputVec.normalize()
-				inputVec.rotateY(-viewYaw.toRadians())
-				inputVec.mulAdd(deltaTime * 2.0, viewCo, viewCo)
-			}
-		}
+		scene.objects.forEach { it.step?.invoke(scene) }
 	}
 
 	override fun close()

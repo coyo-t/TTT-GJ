@@ -1,6 +1,10 @@
 package coyote.window
 
+import org.joml.Vector2d
+import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.*
+import org.lwjgl.system.MemoryStack.stackPush
+import kotlin.use
 
 class Window(val handle: Long)
 {
@@ -30,6 +34,16 @@ class Window(val handle: Long)
 	fun show ()
 	{
 		glfwShowWindow(handle)
+	}
+
+	fun getCursorLocation (into: Vector2d): Vector2d
+	{
+		stackPush().use { stack ->
+			val x = stack.mallocDouble(1)
+			val y = stack.mallocDouble(1)
+			glfwGetCursorPos(handle, x, y)
+			return into.set(x.get(), y.get())
+		}
 	}
 
 	fun setSizeLimits (minSize:Pair<Int,Int>?, maxSize:Pair<Int,Int>?)
