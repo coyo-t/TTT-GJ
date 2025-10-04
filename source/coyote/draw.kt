@@ -1,6 +1,9 @@
 package coyote
 
+import coyote.geom.RenderSubmittingTessDigester
+import coyote.geom.Tesselator
 import coyote.geom.TesselatorStore
+import coyote.geom.VertexFormat
 import coyote.ren.CompiledShaders
 import org.joml.Matrix4fStack
 import org.lwjgl.opengl.GL
@@ -14,14 +17,19 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
+@PublishedApi internal val globalTess = Tesselator()
+@PublishedApi internal val globalTessSubmitter = RenderSubmittingTessDigester()
 
-var currentSurfaceTarget: Surface? = null
 private val currentSurfaceHandle get() = currentSurfaceTarget?.handle ?: 0
+var currentSurfaceTarget: Surface? = null
+	private set
 var currentShader: CompiledShaders.ShaderPipeline? = null
+	private set
 lateinit var currentCapabilities: GLCapabilities
-val matrixBufferSize = ((4*4)*4L)*3
-val transform = Matrix4fStack(16)
-val matrixSegment = Arena.ofAuto().allocate(matrixBufferSize).apply {
+	private set
+val drawGlobalTransform = Matrix4fStack(16)
+private val matrixBufferSize = ((4*4)*4L)*3
+private val matrixSegment = Arena.ofAuto().allocate(matrixBufferSize).apply {
 	setAtIndex(JAVA_FLOAT, 0L, 1f)
 	setAtIndex(JAVA_FLOAT, 5L, 1f)
 	setAtIndex(JAVA_FLOAT, 11L, 1f)
@@ -29,10 +37,20 @@ val matrixSegment = Arena.ofAuto().allocate(matrixBufferSize).apply {
 }
 
 // lazy variable as glCreateBuffers cant be used before context is set
-val matrixBuffer by lazy {
+private val matrixBuffer by lazy {
 	val l = glCreateBuffers()
 	glNamedBufferStorage(l, matrixBufferSize, GL_DYNAMIC_STORAGE_BIT)
 	l
+}
+
+@OptIn(ExperimentalContracts::class)
+inline fun <T> drawMesh (format: VertexFormat, pr:Int, block:(Tesselator)->T): T
+{
+	contract { callsInPlace(block,  InvocationKind.EXACTLY_ONCE) }
+	globalTess.begin(format)
+	val outs = block(globalTess)
+	globalTess.end(globalTessSubmitter.withMode(pr))
+	return outs
 }
 
 fun drawBlitSurfaces (
@@ -75,14 +93,18 @@ fun drawCreateCapabilities () = GL.createCapabilities().also { currentCapabiliti
 
 fun drawSubmit (vao:Int, pr:Int, indexCount:Int)
 {
+	drawSubmit(vao, pr, indexCount, GL_UNSIGNED_INT, 0L)
+}
+fun drawSubmit (vao:Int, pr:Int, indexCount:Int, type:Int, offset:Long=0L)
+{
 	val currentShader = currentShader ?: return
-	transform.get(matrixSegment, 0L)
+	drawGlobalTransform.get(matrixSegment, 0L)
 	nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
 	val uhh = glGetUniformBlockIndex(currentShader.vr, "MATRICES")
 	glUniformBlockBinding(currentShader.vr, uhh, 0)
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, matrixBuffer)
 	glBindVertexArray(vao)
-	glDrawElements(pr, indexCount, GL_UNSIGNED_INT, 0)
+	glDrawElements(pr, indexCount, type, offset)
 }
 
 fun drawSubmit (tess: TesselatorStore, pr:Int)

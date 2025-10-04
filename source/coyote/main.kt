@@ -1,7 +1,5 @@
 package coyote
 
-import coyote.geom.RenderSubmittingTessDigester
-import coyote.geom.Tesselator
 import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
@@ -180,15 +178,10 @@ fun main (vararg args: String)
 	val testRenderTargetTexture = TEXTUREZ.createTexture(256, 256).apply {
 		setFilter(GL_LINEAR, GL_LINEAR)
 	}
-	val testFBDepth = glCreateRenderbuffers()
-	glNamedRenderbufferStorage(testFBDepth, GL_DEPTH_COMPONENT, 256, 256)
-
-	val testSurface = drawCreateSurface()
-	testSurface.setColorAttachment(0, testRenderTargetTexture)
-	testSurface.setDepthAttachment(256, 256)
-
-	val tessSubmitter = RenderSubmittingTessDigester()
-	val tess = Tesselator()
+	val testSurface = drawCreateSurface().apply {
+		setColorAttachment(0, testRenderTargetTexture)
+		setDepthAttachment(256, 256)
+	}
 
 	val rtTexDisplayTestUhhh = TEXTUREZ[ResourceLocation.of("texture/color calibration card.kra")]
 
@@ -239,29 +232,29 @@ fun main (vararg args: String)
 			drawSetViewPort(wide, tall)
 			drawSetDepthTestEnable(true)
 			drawSetDepthWriteEnable(true)
-			transform.apply {
+			drawGlobalTransform.apply {
 				identity()
-//				ortho(0f, wide.toFloat(), tall.toFloat(), 0f, 0f, 10f)
+				ortho(0f, wide.toFloat(), tall.toFloat(), 0f, 0f, 10f)
+				translate(128f, 128f, -1f)
+				rotateZ((sin(time * PI) * 45.0).toRadiansf())
+				scale(64f)
 			}
 			val r = lerp(sin(time * 0.9 * PI) * 0.5 + 0.5, 0.2, 0.8)
 			val g = lerp(cos(time * 0.8 * PI) * 0.5 + 0.5, 0.3, 0.9)
 			val b = 0.7
 			drawClearColor(r,g,b)
 			drawClearDepth(1)
-			with (tess)
-			{
-				begin(TEST_VERTEX_FORMAT)
+			drawSetShader(shaderTest_uniformBlocks)
+			drawBindTexture(0, rtTexDisplayTestUhhh)
+			drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess -> with(tess) {
+//				vertexTransform.scale(256.0)
 				color(Color.WHITE)
-				val zp = sin(time * PI)
-				vertex(-0.5,-0.5,zp, 0,0)
-				vertex(+0.5,-0.5,zp, 1,0)
-				vertex(+0.5,+0.5,zp, 1,1)
-				vertex(-0.5,+0.5,zp, 0,1)
+				vertex(-0.5,-0.5,0, 0,0)
+				vertex(+0.5,-0.5,0, 1,0)
+				vertex(+0.5,+0.5,0, 1,1)
+				vertex(-0.5,+0.5,0, 0,1)
 				quad()
-				drawSetShader(shaderTest_uniformBlocks)
-				drawBindTexture(0, rtTexDisplayTestUhhh)
-				end(tessSubmitter.withMode(GL_TRIANGLES))
-			}
+			}}
 		}
 
 		drawSetSurface(null)
@@ -270,7 +263,7 @@ fun main (vararg args: String)
 		drawSetDepthWriteEnable(true)
 		drawSetViewPort(winWide, winTall)
 		drawClearDepth(1)
-		transform.apply {
+		drawGlobalTransform.apply {
 			identity()
 			perspective(70f, winWide.toFloat()/winTall, 0.001f, 100f)
 			rotateX(viewPitch.toRadiansf())
@@ -287,7 +280,12 @@ fun main (vararg args: String)
 		drawBindTexture(0, TEXTUREZ[TEXTURE_WHITE])
 		drawSubmit(modelTest_compass, GL_LINES)
 
-		drawBlitSurfaces(testSurface, 0, 0, 256, 256, null, 32, 32, 128, 128, GL_COLOR_BUFFER_BIT, GL_LINEAR)
+		drawBlitSurfaces(
+			testSurface, 0, 0, 256, 256,
+			null, 32, 32, 128, 128,
+			GL_COLOR_BUFFER_BIT,
+			GL_LINEAR,
+		)
 
 		window.swapBuffers()
 		pevWindowSize.set(windowSize)

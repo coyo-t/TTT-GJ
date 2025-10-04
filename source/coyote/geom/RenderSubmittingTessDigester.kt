@@ -1,6 +1,7 @@
 package coyote.geom
 
 import coyote.applyVertexFormat
+import coyote.drawSubmit
 import org.lwjgl.opengl.GL45C.*
 import java.lang.foreign.Arena
 import java.lang.foreign.MemorySegment
@@ -9,7 +10,7 @@ import java.lang.foreign.ValueLayout
 class RenderSubmittingTessDigester: TesselatorDigester<Unit>()
 {
 	private var mode = GL_TRIANGLES
-	private val vao = glCreateVertexArrays()
+	private var vao = 0
 	private var vb = 0
 	private var vbSize = 0L
 	private var ib = 0
@@ -37,6 +38,11 @@ class RenderSubmittingTessDigester: TesselatorDigester<Unit>()
 			return
 		if (indices.isEmpty())
 			return
+
+		if (vao <= 0)
+		{
+			vao = glCreateVertexArrays()
+		}
 
 		val inVSize = data.byteSize()
 		if (vbSize < inVSize)
@@ -79,18 +85,19 @@ class RenderSubmittingTessDigester: TesselatorDigester<Unit>()
 		nglNamedBufferSubData(ib, 0L, inISize, iMemory.address())
 		nglNamedBufferSubData(vb, 0L, inVSize, data.address())
 
-		glBindVertexArray(vao)
-		glDrawElements(mode, indices.size, GL_UNSIGNED_INT, 0L)
+		drawSubmit(vao, mode, indices.size, GL_UNSIGNED_INT)
 	}
 
 	override fun close()
 	{
 		check(!closed)
+
 		if (vb != 0)
 			glDeleteBuffers(vb)
 		if (ib != 0)
 			glDeleteBuffers(ib)
-		glDeleteVertexArrays(vao)
+		if (vao != 0)
+			glDeleteVertexArrays(vao)
 		closed = true
 	}
 }
