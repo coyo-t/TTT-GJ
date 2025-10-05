@@ -89,10 +89,6 @@ class FPW: AutoCloseable
 
 	private var firstFrame = true
 
-	val projectionMatrix = Matrix4fStack(8)
-	val viewMatrix = Matrix4fStack(16)
-	val worldMatrix = Matrix4fStack(32)
-
 	val scene = Scene()
 
 	val window: Window
@@ -162,7 +158,7 @@ class FPW: AutoCloseable
 	}
 
 	val testFont by lazy {
-		initTestFont(ResourceLocation.of("font/test font 1.lua"))
+		initTestFont(ResourceLocation.of("font/kfont2.lua"))
 	}
 
 	fun initTestFont (fontName: ResourceLocation): Font
@@ -183,6 +179,9 @@ class FPW: AutoCloseable
 				0.0
 			L.pop(2)
 			val rcpWide = 1.0 / pic.wide
+			val rcpTall = 1.0 / pic.tall
+			val xMargin = margin * rcpWide
+			val yMargin = margin * rcpTall
 			val keyColor = pic[0, 0]
 			val charSet = maybe["chars"].toString()
 			val charCount = charSet.length
@@ -205,7 +204,7 @@ class FPW: AutoCloseable
 							val uv1 = i * rcpWide
 							this += Font.Glyph(
 								char = charSet[currentChar],
-								patch = Rectangle(uv0+margin, margin, uv1-margin, 1.0-margin),
+								patch = Rectangle(uv0+xMargin, yMargin, uv1-xMargin, 1.0-yMargin),
 								advance = i-j,
 								height = pic.tall,
 							)
@@ -225,7 +224,7 @@ class FPW: AutoCloseable
 					i += 1
 				}
 			}
-			return Font(TEXTUREZ.add(fontName, pic), glf)
+			return Font(TEXTUREZ.add(fontName, pic), glf, pic.tall)
 		}
 	}
 
@@ -398,20 +397,26 @@ class FPW: AutoCloseable
 			ortho(0f, windowSize.x.toFloat(), windowSize.y.toFloat(), 0f, 0f, 10f)
 		}
 
-		val testString = "TEXT TEXTH YEAH ABCDEFGHIJKLMNOPQRSTUVWXYZ WOWWW"
+		val testString = "So like this one time i ate a Whole Ant!\nI don't know what an ant is :3"
 		var xText = 0
 		var yText = 0
-		val charSpacing = 2
+		val charSpacing = 0
 		drawSetBlendMode(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 		drawSetShader(shaderTest_uniformBlocks)
 		drawBindTexture(0, testFont.texture)
+
+		drawWorldMatrix.pushMatrix().scale(screenScalar.scale.toFloat())
 		drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
-			tess.vertexTransform.scale(screenScalar.scale.toDouble())
 			for (ch in testString)
 			{
+				if (ch == '\n')
+				{
+					xText = 0
+					yText += testFont.lineHeight
+					continue
+				}
 				val charIndex = testFont[ch] ?: continue
 				val chAdvance = charIndex.advance
-
 				if (ch == ' ')
 				{
 					xText += chAdvance
@@ -428,6 +433,7 @@ class FPW: AutoCloseable
 				xText += chAdvance + charSpacing
 			}
 		}
+		drawWorldMatrix.popMatrix()
 
 		if (firstFrame)
 		{

@@ -2,7 +2,8 @@ package coyote
 
 class Font(
 	val texture: Texture,
-	val glyphs: List<Glyph>
+	val glyphs: List<Glyph>,
+	val lineHeight: Int,
 )
 {
 	private val glyphsByChar = mutableMapOf<Char, Glyph>()
