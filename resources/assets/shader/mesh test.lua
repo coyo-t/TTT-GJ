@@ -8,9 +8,9 @@ return {
 		layout(location=3) in vec4 aColor;
 
 		layout(std140, binding=0) uniform MATRICES {
-			mat4 matrixPVM;
-			mat4 matrix1;
-			mat4 matrix2;
+			mat4 matrixProjection;
+			mat4 matrixView;
+			mat4 matrixWorld;
 		};
 
 		layout(location=0) out struct {
@@ -20,7 +20,7 @@ return {
 
 		void main ()
 		{
-			gl_Position = matrixPVM * vec4(aLocation, 1.0);
+			gl_Position = matrixProjection * matrixView * matrixWorld * vec4(aLocation, 1.0);
 			v_v.texture = aTexture;
 			v_v.color = aColor;
 		}

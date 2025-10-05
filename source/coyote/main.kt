@@ -1,5 +1,7 @@
 package coyote
 
+import coyote.ren.CompiledShaders
+import coyote.resource.ResourceManager
 import coyote.window.WindowManager
 import org.lwjgl.system.Configuration
 import kotlin.io.path.Path
@@ -9,6 +11,11 @@ import kotlin.io.path.invariantSeparatorsPathString
 val RESOURCE_PATH = Path("./resources/").normalize().toAbsolutePath()
 val ASSETS_PATH = RESOURCE_PATH/"assets"
 val DATA_PATH = RESOURCE_PATH/"data"
+
+val RESOURCES = ResourceManager(ASSETS_PATH)
+val SHADERZ = CompiledShaders(RESOURCES)
+val TEXTUREZ = TextureManager(RESOURCES)
+val MODELZ = OBJModelManager(RESOURCES)
 
 fun main (vararg args: String)
 {

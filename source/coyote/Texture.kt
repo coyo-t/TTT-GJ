@@ -2,7 +2,11 @@ package coyote
 
 import org.lwjgl.opengl.GL46C.*
 
-class Texture(val wide: Int, val tall:Int, val handle:Int)
+class Texture (
+	val wide: Int,
+	val tall:Int,
+	val handle:Int,
+)
 {
 	fun uploadImage (pic: NativeImage)
 	{

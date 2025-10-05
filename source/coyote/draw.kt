@@ -32,8 +32,21 @@ var currentShader: CompiledShaders.ShaderPipeline? = null
 lateinit var currentCapabilities: GLCapabilities
 	private set
 val drawGlobalTransform = Matrix4fStack(16)
-private val matrixBufferSize = ((4*4)*4L)*3
-private val matrixSegment = Arena.ofAuto().allocate(matrixBufferSize).apply {
+
+val drawWorldMatrix = Matrix4fStack(32)
+val drawViewMatrix = Matrix4fStack(16)
+val drawProjectionMatrix = Matrix4fStack(8)
+
+fun drawClearMatrices ()
+{
+	drawWorldMatrix.clear()
+	drawViewMatrix.clear()
+	drawProjectionMatrix.clear()
+}
+
+private val MATRIX_SIZE = ((4*4)*Float.SIZE_BYTES).toLong()
+private val MATRIX_BUFFER_SIZE = MATRIX_SIZE*3L
+private val matrixSegment = Arena.ofAuto().allocate(MATRIX_BUFFER_SIZE).apply {
 	setAtIndex(JAVA_FLOAT, 0L, 1f)
 	setAtIndex(JAVA_FLOAT, 5L, 1f)
 	setAtIndex(JAVA_FLOAT, 11L, 1f)
@@ -44,7 +57,7 @@ private var shaderMatrixHandleTable = mutableMapOf<Int, Optional<Int>>()
 // lazy variable as glCreateBuffers cant be used before context is set
 private val matrixBuffer by lazy {
 	val l = glCreateBuffers()
-	glNamedBufferStorage(l, matrixBufferSize, GL_DYNAMIC_STORAGE_BIT)
+	glNamedBufferStorage(l, MATRIX_BUFFER_SIZE, GL_DYNAMIC_STORAGE_BIT)
 	l
 }
 
@@ -99,6 +112,12 @@ fun drawInitialize ()
 	isInitialized = true
 }
 
+fun drawSetBlendMode (src:Int, dst:Int)
+{
+	glBlendFunc(src, dst)
+}
+
+
 
 fun drawSubmit (vao:Int, pr:Int, indexCount:Int)
 {
@@ -107,8 +126,11 @@ fun drawSubmit (vao:Int, pr:Int, indexCount:Int)
 fun drawSubmit (vao:Int, pr:Int, indexCount:Int, type:Int, offset:Long=0L)
 {
 	val currentShader = currentShader ?: return
-	drawGlobalTransform.get(matrixSegment, 0L)
-	nglNamedBufferSubData(matrixBuffer, 0L, matrixBufferSize, matrixSegment.address())
+	drawProjectionMatrix.get(matrixSegment, 0L)
+	drawViewMatrix.get(matrixSegment, MATRIX_SIZE)
+	drawWorldMatrix.get(matrixSegment, MATRIX_SIZE*2)
+
+	nglNamedBufferSubData(matrixBuffer, 0L, MATRIX_BUFFER_SIZE, matrixSegment.address())
 	shaderMatrixHandleTable.getOrPut(currentShader.vr) {
 		val m = glGetUniformBlockIndex(currentShader.vr, "MATRICES")
 		if (m < 0)
@@ -130,6 +152,16 @@ fun drawSubmit (tess: TesselatorStore, pr:Int)
 	drawSubmit(tess.getVAO(), pr, tess.indexCount)
 }
 
+fun drawSetFlags (vararg rest:Pair<Int, Boolean>)
+{
+	for ((i,f) in rest)
+	{
+		if (f)
+			glEnable(i)
+		else
+			glDisable(i)
+	}
+}
 fun drawSetFlag (what:Int, to: Boolean)
 {
 	if (to)

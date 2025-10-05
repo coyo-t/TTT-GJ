@@ -1,20 +1,22 @@
 package coyote
 
-import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
-import coyote.resource.ResourceManager
 import coyote.window.Window
 import coyote.window.WindowHint
 import coyote.window.WindowManager
 import org.joml.Math.lerp
+import org.joml.Matrix4f
 import org.joml.Matrix4fStack
 import org.joml.Vector2d
 import org.joml.Vector2i
 import org.joml.Vector3d
+import org.joml.Vector3f
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL11C.*
 import org.lwjgl.opengl.GL46C.GL_DEBUG_OUTPUT
+import party.iroiro.luajava.value.LuaTableValue
 import java.awt.Color
+import java.io.InputStreamReader
 import java.lang.foreign.Arena
 import kotlin.math.PI
 import kotlin.math.cos
@@ -62,11 +64,6 @@ class FPW: AutoCloseable
 		vertex(+0.1, +1, -0.1)
 		endLine(true)
 	}
-
-	val RESOURCES = ResourceManager(ASSETS_PATH)
-	val SHADERZ = CompiledShaders(RESOURCES)
-	val TEXTUREZ = TextureManager(RESOURCES)
-	val MODELZ = OBJModelManager(RESOURCES)
 
 	val windowSize = Vector2i(650, 450)
 	val pevWindowSize = Vector2i(windowSize)
@@ -159,6 +156,74 @@ class FPW: AutoCloseable
 		TEXTUREZ[ResourceLocation.of("texture/color calibration card.kra")]
 	}
 
+	val testFont by lazy {
+		initTestFont(ResourceLocation.of("font/test font 1.lua"))
+	}
+
+	fun initTestFont (fontName: ResourceLocation): Font
+	{
+		LuaCoyote().use { L ->
+			L.openLibraries()
+			val maybe = InputStreamReader(RESOURCES[fontName]!!.openInputStream()).use { stream ->
+				L.run(stream.readText())
+				L.get() as LuaTableValue
+			}
+			val picName = ResourceLocation.of(maybe["source"].toString())
+			val pic = TEXTUREZ.imageManager[picName]
+			L.push(maybe)
+			L.getField(-1, "margin")
+			val margin = if (L.isNumber(-1))
+				L.toNumber(-1).toDouble()
+			else
+				0.0
+			L.pop(2)
+			val rcpWide = 1.0 / pic.wide
+			val keyColor = pic[0, 0]
+			val charSet = maybe["chars"].toString()
+			val charCount = charSet.length
+			var mode = false
+			var i = 0
+			var j = 0
+			val stop = pic.wide
+			var currentChar = 0
+			val glf = buildList {
+				while (i < (stop+1) && currentChar < charCount)
+				{
+					val atEnd = i == stop
+					val pixel = pic[i, 0]
+					val whatStage = mode || atEnd
+					if (whatStage)
+					{
+						if (atEnd || pixel == keyColor)
+						{
+							val uv0 = j * rcpWide
+							val uv1 = i * rcpWide
+							this += Font.Glyph(
+								char = charSet[currentChar],
+								patch = Rectangle(uv0+margin, margin, uv1-margin, 1.0-margin),
+								advance = i-j,
+								height = pic.tall,
+							)
+							currentChar += 1
+							mode = false
+						}
+					}
+					else
+					{
+						if (pixel != keyColor)
+						{
+							j = i
+							mode = true
+						}
+					}
+
+					i += 1
+				}
+			}
+			return Font(TEXTUREZ.add(fontName, pic), glf)
+		}
+	}
+
 	fun init ()
 	{
 		window.setRawMouseMotion(true)
@@ -185,7 +250,10 @@ class FPW: AutoCloseable
 
 		window.makeContextCurrent()
 		drawInitialize()
-		drawSetFlag(GL_DEBUG_OUTPUT, true)
+		drawSetFlags(
+			GL_DEBUG_OUTPUT to true,
+			GL_BLEND to true,
+		)
 		drawSetDebugMessageCallback(0L, ::rendererDebugMessage)
 
 		Arena.ofConfined().use { arena ->
@@ -225,10 +293,13 @@ class FPW: AutoCloseable
 
 			override fun draw(scene: Scene)
 			{
-				with (drawGlobalTransform)
+				drawClearMatrices()
+				with (drawProjectionMatrix)
 				{
-					identity()
 					perspective(70f, windowSize.x.toFloat() / windowSize.y, 0.001f, 100f)
+				}
+				with (drawViewMatrix)
+				{
 					rotateX(viewPitch.toRadiansf())
 					rotateY(viewYaw.toRadiansf())
 					translate(-viewCo.x.toFloat(), -viewCo.y.toFloat(), -viewCo.z.toFloat())
@@ -251,13 +322,19 @@ class FPW: AutoCloseable
 		}
 		// compass
 		scene.objects += object : SceneObject() {
+			val tempVec = Vector3f()
+			val tempMat = Matrix4f()
 			override fun draw(scene: Scene)
 			{
+				drawWorldMatrix.pushMatrix()
+				drawWorldMatrix.translate(drawViewMatrix.invert(tempMat).getTranslation(tempVec))
 				drawSetShader(shaderTest_uniformBlocks)
 				drawBindTexture(0, TEXTUREZ[TEXTURE_WHITE])
 				drawSubmit(modelTest_compass, GL_LINES)
+				drawWorldMatrix.popMatrix()
 			}
 		}
+
 	}
 
 	fun draw ()
@@ -266,11 +343,12 @@ class FPW: AutoCloseable
 		val winTall = windowSize.y
 		drawToSurface(testSurface) {
 			val (wide, tall) = testRenderTargetTexture.size
+			drawClearMatrices()
 			drawSetViewPort(wide, tall)
 			drawSetWindingOrder(GL_CW)
 			drawSetDepthTestEnable(true)
 			drawSetDepthWriteEnable(true)
-			drawGlobalTransform.apply {
+			drawProjectionMatrix.apply {
 				identity()
 				ortho(0f, wide.toFloat(), tall.toFloat(), 0f, 0f, 10f)
 				translate(128f, 128f, -1f)
@@ -304,13 +382,43 @@ class FPW: AutoCloseable
 		scene.renderObjects()
 
 		drawClearDepth(1)
+		drawClearMatrices()
+		with (drawProjectionMatrix)
+		{
+			identity()
+			ortho(0f, windowSize.x.toFloat(), windowSize.y.toFloat(), 0f, 0f, 10f)
+		}
 
-//		drawBlitSurfaces(
-//			testSurface, 0, 0, 256, 256,
-//			null, 32, 32, 128, 128,
-//			GL_COLOR_BUFFER_BIT,
-//			GL_LINEAR,
-//		)
+		val testString = "TEXT TEXTH YEAH ABCDEFGHIJKLMNOPQRSTUVWXYZ WOWWW"
+		var xText = 0
+		var yText = 0
+		val charSpacing = 2
+		drawSetBlendMode(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+		drawSetShader(shaderTest_uniformBlocks)
+		drawBindTexture(0, testFont.texture)
+		drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
+			tess.vertexTransform.scale(4.0)
+			for (ch in testString)
+			{
+				val charIndex = testFont[ch] ?: continue
+				val chAdvance = charIndex.advance
+
+				if (ch == ' ')
+				{
+					xText += chAdvance
+					continue
+				}
+
+				val chRect = charIndex.patch
+				val fontHeight = charIndex.height
+				tess.vertex(xText, yText+fontHeight, 0, chRect.x0, chRect.y1)
+				tess.vertex(xText+chAdvance, yText+fontHeight, 0, chRect.x1, chRect.y1)
+				tess.vertex(xText+chAdvance, yText, 0, chRect.x1, chRect.y0)
+				tess.vertex(xText, yText, 0, chRect.x0, chRect.y0)
+				tess.quad()
+				xText += chAdvance + charSpacing
+			}
+		}
 
 		if (firstFrame)
 		{
