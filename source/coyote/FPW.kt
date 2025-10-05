@@ -303,12 +303,14 @@ class FPW: AutoCloseable
 
 		scene.renderObjects()
 
-		drawBlitSurfaces(
-			testSurface, 0, 0, 256, 256,
-			null, 32, 32, 128, 128,
-			GL_COLOR_BUFFER_BIT,
-			GL_LINEAR,
-		)
+		drawClearDepth(1)
+
+//		drawBlitSurfaces(
+//			testSurface, 0, 0, 256, 256,
+//			null, 32, 32, 128, 128,
+//			GL_COLOR_BUFFER_BIT,
+//			GL_LINEAR,
+//		)
 
 		if (firstFrame)
 		{
