@@ -81,6 +81,11 @@ class FPW: AutoCloseable
 	var time = WindowManager.time
 	var pevTime = time
 	var deltaTime = time - pevTime
+	var screenScale = 3
+	val screenScalar = ScreenScalar(320, 240).apply {
+		sizeProvider = { windowSize }
+		preferredScaleProvider = { screenScale }
+	}
 
 	private var firstFrame = true
 
@@ -229,6 +234,7 @@ class FPW: AutoCloseable
 		window.setRawMouseMotion(true)
 		glfwSetWindowSizeCallback(window.handle) { _, w, h ->
 			windowSize.set(w, h)
+			screenScalar.update()
 			draw()
 		}
 		glfwSetFramebufferSizeCallback(window.handle) { _, w, h ->
@@ -346,6 +352,7 @@ class FPW: AutoCloseable
 			drawClearMatrices()
 			drawSetViewPort(wide, tall)
 			drawSetWindingOrder(GL_CW)
+			drawSetCullingEnabled(true)
 			drawSetDepthTestEnable(true)
 			drawSetDepthWriteEnable(true)
 			drawProjectionMatrix.apply {
@@ -374,6 +381,7 @@ class FPW: AutoCloseable
 
 		drawSetSurface(null)
 		drawSetWindingOrder(GL_CCW)
+		drawSetCullingEnabled(true)
 		drawSetDepthTestEnable(true)
 		drawSetDepthWriteEnable(true)
 		drawSetViewPort(winWide, winTall)
@@ -383,6 +391,7 @@ class FPW: AutoCloseable
 
 		drawClearDepth(1)
 		drawClearMatrices()
+		drawSetCullingEnabled(false)
 		with (drawProjectionMatrix)
 		{
 			identity()
@@ -397,7 +406,7 @@ class FPW: AutoCloseable
 		drawSetShader(shaderTest_uniformBlocks)
 		drawBindTexture(0, testFont.texture)
 		drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
-			tess.vertexTransform.scale(4.0)
+			tess.vertexTransform.scale(screenScalar.scale.toDouble())
 			for (ch in testString)
 			{
 				val charIndex = testFont[ch] ?: continue
@@ -442,6 +451,7 @@ class FPW: AutoCloseable
 			throw StopGame()
 		time = WindowManager.time
 		deltaTime = time - pevTime
+		screenScalar.update()
 		window.getCursorLocation(curMouseCo).sub(pevMouseCo, mouseDelta)
 		if (!windowHasFocus)
 			mouseGrabbedness(false)
