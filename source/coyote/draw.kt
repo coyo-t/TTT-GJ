@@ -152,16 +152,6 @@ fun drawSubmit (tess: TesselatorStore, pr:Int)
 	drawSubmit(tess.getVAO(), pr, tess.indexCount)
 }
 
-fun drawSetFlags (vararg rest:Pair<Int, Boolean>)
-{
-	for ((i,f) in rest)
-	{
-		if (f)
-			glEnable(i)
-		else
-			glDisable(i)
-	}
-}
 fun drawSetFlag (what:Int, to: Boolean)
 {
 	if (to)

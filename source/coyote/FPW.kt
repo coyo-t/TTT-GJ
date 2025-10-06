@@ -5,11 +5,9 @@ import coyote.window.Window
 import coyote.window.WindowHint
 import coyote.window.WindowManager
 import org.joml.Math.lerp
-import org.joml.Matrix4f
 import org.joml.Vector2d
 import org.joml.Vector2i
 import org.joml.Vector3d
-import org.joml.Vector3f
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL11C.*
 import org.lwjgl.opengl.GL46C.GL_DEBUG_OUTPUT
@@ -31,37 +29,6 @@ class FPW: AutoCloseable
 		location3D()
 		textureCoord()
 		byteColor()
-	}
-	val modelTest_compass = buildModel(TEST_VERTEX_FORMAT) {
-		vertexTransform.apply {
-			scale(0.1)
-		}
-		// north
-		color(Color(0xD23636))
-		startLine()
-		vertex(-0.1, -0.1, -1)
-		vertex(-0.1, +0.1, -1)
-		vertex(+0.1, +0.1, -1)
-		vertex(+0.1, -0.1, -1)
-		endLine(true)
-
-		// east
-		color(Color(0xFFD240))
-		startLine()
-		vertex(+1, -0.1, -0.1)
-		vertex(+1, +0.1, -0.1)
-		vertex(+1, +0.1, +0.1)
-		vertex(+1, -0.1, +0.1)
-		endLine(true)
-
-		// up
-		color(Color(0x67A6FC))
-		startLine()
-		vertex(-0.1, +1, -0.1)
-		vertex(-0.1, +1, +0.1)
-		vertex(+0.1, +1, +0.1)
-		vertex(+0.1, +1, -0.1)
-		endLine(true)
 	}
 
 	val windowSize = Vector2i(650, 450)
@@ -87,8 +54,6 @@ class FPW: AutoCloseable
 	}
 
 	private var firstFrame = true
-
-	val scene = Scene()
 
 	val window: Window
 	init
@@ -165,6 +130,8 @@ class FPW: AutoCloseable
 	val texture_Untextured by lazy {
 		TEXTUREZ[ResourceLocation.of("texture/untextured.png")]
 	}
+
+	val tex_env_uhh = ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")
 
 	val testFont by lazy {
 		initTestFont(ResourceLocation.of("font/kfont2.lua"))
@@ -264,10 +231,8 @@ class FPW: AutoCloseable
 
 		window.makeContextCurrent()
 		drawInitialize()
-		drawSetFlags(
-			GL_DEBUG_OUTPUT to true,
-			GL_BLEND to true,
-		)
+		drawSetFlag(GL_DEBUG_OUTPUT, true)
+		drawSetFlag(GL_BLEND, true)
 		drawSetDebugMessageCallback(0L, ::rendererDebugMessage)
 
 		Arena.ofConfined().use { arena ->
@@ -280,74 +245,6 @@ class FPW: AutoCloseable
 		drawSetCullingSide(GL_BACK)
 		drawSetCullingEnabled(true)
 
-		// viewpoint
-		scene.objects += object : SceneObject() {
-			override fun step(scene: Scene)
-			{
-				if (mouseGrabbed)
-				{
-					viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
-					viewYaw = viewYaw + mouseDelta.x * viewSens
-
-					inputVec.x += if (inputMap[GLFW_KEY_D] == true) 1.0 else 0.0
-					inputVec.x -= if (inputMap[GLFW_KEY_A] == true) 1.0 else 0.0
-					inputVec.z -= if (inputMap[GLFW_KEY_W] == true) 1.0 else 0.0
-					inputVec.z += if (inputMap[GLFW_KEY_S] == true) 1.0 else 0.0
-					inputVec.y += if (inputMap[GLFW_KEY_SPACE] == true) 1.0 else 0.0
-					inputVec.y -= if (inputMap[GLFW_KEY_LEFT_SHIFT] == true) 1.0 else 0.0
-
-					if (inputVec.x != 0.0 || inputVec.y != 0.0 || inputVec.z != 0.0)
-					{
-						inputVec.normalize()
-						inputVec.rotateY(-viewYaw.toRadians())
-						inputVec.mulAdd(deltaTime * 2.0, viewCo, viewCo)
-					}
-				}
-			}
-
-			override fun draw(scene: Scene)
-			{
-				drawClearMatrices()
-				with (drawProjectionMatrix)
-				{
-					perspective(70f, windowSize.x.toFloat() / windowSize.y, 0.001f, 100f)
-				}
-				with (drawViewMatrix)
-				{
-					rotateX(viewPitch.toRadiansf())
-					rotateY(viewYaw.toRadiansf())
-					translate(-viewCo.x.toFloat(), -viewCo.y.toFloat(), -viewCo.z.toFloat())
-				}
-			}
-			init {
-				renderPriority = -9999
-			}
-		}
-		// env
-		scene.objects += object : SceneObject() {
-			val texName = ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")
-			override fun draw(scene: Scene)
-			{
-				drawSetShader(shaderTest_storedOBJ)
-				drawBindTexture(0, TEXTUREZ[texName])
-				drawBindTexture(1, testRenderTargetTexture)
-				drawSubmit(testSavedModel, GL_TRIANGLES)
-			}
-		}
-		// compass
-		scene.objects += object : SceneObject() {
-			val tempVec = Vector3f()
-			val tempMat = Matrix4f()
-			override fun draw(scene: Scene)
-			{
-				drawWorldMatrix.pushMatrix()
-				drawWorldMatrix.translate(drawViewMatrix.invert(tempMat).getTranslation(tempVec))
-				drawSetShader(shaderTest_uniformBlocks)
-				drawBindTexture(0, TEXTUREZ[TEXTURE_WHITE])
-				drawSubmit(modelTest_compass, GL_LINES)
-				drawWorldMatrix.popMatrix()
-			}
-		}
 
 	}
 
@@ -387,6 +284,7 @@ class FPW: AutoCloseable
 			}}
 		}
 
+		//#region scene
 		drawSetSurface(null)
 		drawSetWindingOrder(GL_CCW)
 		drawSetCullingEnabled(true)
@@ -395,8 +293,26 @@ class FPW: AutoCloseable
 		drawSetViewPort(winWide, winTall)
 		drawClearDepth(1)
 
-		scene.renderObjects()
+		// camera
+		drawClearMatrices()
+		with (drawProjectionMatrix)
+		{
+			perspective(70f, windowSize.x.toFloat() / windowSize.y, 0.001f, 100f)
+		}
+		with (drawViewMatrix)
+		{
+			rotateX(viewPitch.toRadiansf())
+			rotateY(viewYaw.toRadiansf())
+			translate(-viewCo.x.toFloat(), -viewCo.y.toFloat(), -viewCo.z.toFloat())
+		}
 
+		// env
+		drawSetShader(shaderTest_storedOBJ)
+		drawBindTexture(0, TEXTUREZ[tex_env_uhh])
+		drawBindTexture(1, testRenderTargetTexture)
+		drawSubmit(testSavedModel, GL_TRIANGLES)
+
+		// crosby
 		drawWorldMatrix.apply {
 			identity()
 			translate(0f, 0f, 0f)
@@ -405,6 +321,7 @@ class FPW: AutoCloseable
 		drawSetShader(shader_Crosby)
 		drawSubmit(model_Crosby, GL_TRIANGLES)
 
+		//#endregion
 
 		drawClearDepth(1)
 		drawClearMatrices()
@@ -491,7 +408,27 @@ class FPW: AutoCloseable
 		if (!windowHasFocus)
 			mouseGrabbedness(false)
 
-		scene.stepObjects()
+		//#region step camera
+		if (mouseGrabbed)
+		{
+			viewPitch = (viewPitch + mouseDelta.y * viewSens).clampedSym(90.0)
+			viewYaw = viewYaw + mouseDelta.x * viewSens
+
+			inputVec.x += if (inputMap[GLFW_KEY_D] == true) 1.0 else 0.0
+			inputVec.x -= if (inputMap[GLFW_KEY_A] == true) 1.0 else 0.0
+			inputVec.z -= if (inputMap[GLFW_KEY_W] == true) 1.0 else 0.0
+			inputVec.z += if (inputMap[GLFW_KEY_S] == true) 1.0 else 0.0
+			inputVec.y += if (inputMap[GLFW_KEY_SPACE] == true) 1.0 else 0.0
+			inputVec.y -= if (inputMap[GLFW_KEY_LEFT_SHIFT] == true) 1.0 else 0.0
+
+			if (inputVec.x != 0.0 || inputVec.y != 0.0 || inputVec.z != 0.0)
+			{
+				inputVec.normalize()
+				inputVec.rotateY(-viewYaw.toRadians())
+				inputVec.mulAdd(deltaTime * 2.0, viewCo, viewCo)
+			}
+		}
+		//#endregion
 	}
 
 	override fun close()
