@@ -6,7 +6,6 @@ import coyote.window.WindowHint
 import coyote.window.WindowManager
 import org.joml.Math.lerp
 import org.joml.Matrix4f
-import org.joml.Matrix4fStack
 import org.joml.Vector2d
 import org.joml.Vector2i
 import org.joml.Vector3d
@@ -133,12 +132,18 @@ class FPW: AutoCloseable
 	val shaderTest_storedOBJ by lazy {
 		SHADERZ[ResourceLocation.of("shader/mesh test.lua")]
 	}
+	val shader_Crosby by lazy {
+		SHADERZ[ResourceLocation.of("shader/crosby.lua")]
+	}
 
 	val textureTest_screenTri by lazy {
 		TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
 	}
 	val testSavedModel by lazy {
 		MODELZ[ResourceLocation.of("model/octmeshprev.obj")]
+	}
+	val model_Crosby by lazy {
+		MODELZ[ResourceLocation.of("model/crosby.obj")]
 	}
 
 	val testRenderTargetTexture by lazy {
@@ -155,6 +160,10 @@ class FPW: AutoCloseable
 
 	val rtTexDisplayTestUhhh by lazy {
 		TEXTUREZ[ResourceLocation.of("texture/color calibration card.kra")]
+	}
+
+	val texture_Untextured by lazy {
+		TEXTUREZ[ResourceLocation.of("texture/untextured.png")]
 	}
 
 	val testFont by lazy {
@@ -174,7 +183,7 @@ class FPW: AutoCloseable
 			L.push(maybe)
 			L.getField(-1, "margin")
 			val margin = if (L.isNumber(-1))
-				L.toNumber(-1).toDouble()
+				L.toNumber(-1)
 			else
 				0.0
 			L.pop(2)
@@ -224,7 +233,7 @@ class FPW: AutoCloseable
 					i += 1
 				}
 			}
-			return Font(TEXTUREZ.add(fontName, pic), glf, pic.tall)
+			return Font(TEXTUREZ.add(fontName, pic), glf, pic.tall).also { pic.close() }
 		}
 	}
 
@@ -388,6 +397,15 @@ class FPW: AutoCloseable
 
 		scene.renderObjects()
 
+		drawWorldMatrix.apply {
+			identity()
+			translate(0f, 0f, 0f)
+		}
+		drawBindTexture(0, texture_Untextured)
+		drawSetShader(shader_Crosby)
+		drawSubmit(model_Crosby, GL_TRIANGLES)
+
+
 		drawClearDepth(1)
 		drawClearMatrices()
 		drawSetCullingEnabled(false)
@@ -397,42 +415,17 @@ class FPW: AutoCloseable
 			ortho(0f, windowSize.x.toFloat(), windowSize.y.toFloat(), 0f, 0f, 10f)
 		}
 
-		val testString = "So like this one time i ate a Whole Ant!\nI don't know what an ant is :3"
-		var xText = 0
-		var yText = 0
-		val charSpacing = 0
 		drawSetBlendMode(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 		drawSetShader(shaderTest_uniformBlocks)
 		drawBindTexture(0, testFont.texture)
 
 		drawWorldMatrix.pushMatrix().scale(screenScalar.scale.toFloat())
-		drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
-			for (ch in testString)
-			{
-				if (ch == '\n')
-				{
-					xText = 0
-					yText += testFont.lineHeight
-					continue
-				}
-				val charIndex = testFont[ch] ?: continue
-				val chAdvance = charIndex.advance
-				if (ch == ' ')
-				{
-					xText += chAdvance
-					continue
-				}
-
-				val chRect = charIndex.patch
-				val fontHeight = charIndex.height
-				tess.vertex(xText, yText+fontHeight, 0, chRect.x0, chRect.y1)
-				tess.vertex(xText+chAdvance, yText+fontHeight, 0, chRect.x1, chRect.y1)
-				tess.vertex(xText+chAdvance, yText, 0, chRect.x1, chRect.y0)
-				tess.vertex(xText, yText, 0, chRect.x0, chRect.y0)
-				tess.quad()
-				xText += chAdvance + charSpacing
-			}
-		}
+		drawText(
+			testFont,
+			0, 0,
+			0,
+			"So like this one time i ate a Whole Ant!\nI don't know what an ant is :3",
+		)
 		drawWorldMatrix.popMatrix()
 
 		if (firstFrame)
@@ -441,6 +434,42 @@ class FPW: AutoCloseable
 			firstFrame = false
 		}
 		window.swapBuffers()
+	}
+
+	private fun drawText (font: Font, spacing: Number, x: Number, y: Number, string: String)
+	{
+		val lh = font.lineHeight
+		var xText1 = 0
+		var yText1 = 0
+		val spacing = spacing.toInt()
+		drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
+			tess.vertexTransform.translate(x.toDouble(), y.toDouble(), 0.0)
+			for (ch in string)
+			{
+				if (ch == '\n')
+				{
+					xText1 = 0
+					yText1 += lh
+					continue
+				}
+				val charIndex = font[ch] ?: continue
+				val chAdvance = charIndex.advance
+				if (ch == ' ')
+				{
+					xText1 += chAdvance
+					continue
+				}
+
+				val chRect = charIndex.patch
+				val fontHeight = charIndex.height
+				tess.vertex(xText1, yText1 + fontHeight, 0, chRect.x0, chRect.y1)
+				tess.vertex(xText1 + chAdvance, yText1 + fontHeight, 0, chRect.x1, chRect.y1)
+				tess.vertex(xText1 + chAdvance, yText1, 0, chRect.x1, chRect.y0)
+				tess.vertex(xText1, yText1, 0, chRect.x0, chRect.y0)
+				tess.quad()
+				xText1 += chAdvance + spacing
+			}
+		}
 	}
 
 	fun preStep ()

@@ -19,7 +19,7 @@ class OBJModelManager(val resourceManager: ResourceManager)
 		byteColor()
 	}
 	private val nt = mutableMapOf<ResourceLocation, TesselatorStore>()
-	private val error = mapOf("" to TesselatorStore.Companion.NON)
+	private val error = mapOf("" to TesselatorStore.NON)
 
 	operator fun get (rl: ResourceLocation): TesselatorStore
 	{
@@ -43,7 +43,26 @@ class OBJModelManager(val resourceManager: ResourceManager)
 				val parts = line.split(" ")
 				when (parts[0])
 				{
-					"v" -> locations += Vector3d(parts[1].toDouble(), parts[2].toDouble(), parts[3].toDouble())
+					"v" ->
+					{
+						locations += Vector3d(parts[1].toDouble(), parts[2].toDouble(), parts[3].toDouble())
+						if ((parts.size - 1) > 3)
+						{
+							val colComps = parts.size - 1 - 3
+							val r = parts[4].toFloat()
+							val g = parts[5].toFloat()
+							val b = parts[6].toFloat()
+							val a = if (colComps >= 4) parts[7].toFloat() else 1f
+							colors += Color(r, g, b, a)
+						}
+						else
+						{
+							if (colors.isNotEmpty())
+							{
+								colors += Color.WHITE
+							}
+						}
+					}
 					"vt" -> textures += Vector2d(parts[1].toDouble(), parts[2].toDouble())
 					"vn" -> normals += Vector3d(parts[1].toDouble(), parts[2].toDouble(), parts[3].toDouble())
 					"f" -> {
@@ -58,14 +77,13 @@ class OBJModelManager(val resourceManager: ResourceManager)
 			}
 			with (Tesselator()) {
 				begin(FORMAT)
+				val hasColor = colors.isNotEmpty()
 				var indexCounter = 0
 				for (fc in vertexCounts)
 				{
 					for (j in 0..<fc)
 					{
 						val (v,vt,vn) = indices[indexCounter]
-
-						color(Color.WHITE)
 						if (vn >= 0)
 						{
 							val nn = normals[vn]
@@ -79,6 +97,10 @@ class OBJModelManager(val resourceManager: ResourceManager)
 						if (v >= 0)
 						{
 							val nn = locations[v]
+							if (hasColor)
+								color(colors[v])
+							else
+								color(Color.white)
 							vertex(nn[0], nn[1], nn[2])
 						}
 						indexCounter += 1
