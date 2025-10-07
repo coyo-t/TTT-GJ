@@ -1,7 +1,6 @@
 package coyote
 
 import coyote.resource.ResourceLocation
-import coyote.window.Window
 import coyote.window.WindowHint
 import coyote.window.WindowManager
 import org.joml.Math.lerp
@@ -11,9 +10,7 @@ import org.joml.Vector3d
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL11C.*
 import org.lwjgl.opengl.GL46C.GL_DEBUG_OUTPUT
-import party.iroiro.luajava.value.LuaTableValue
 import java.awt.Color
-import java.io.InputStreamReader
 import java.lang.foreign.Arena
 import kotlin.math.PI
 import kotlin.math.cos
@@ -55,31 +52,27 @@ class FPW: AutoCloseable
 
 	private var firstFrame = true
 
-	val window: Window
-	init
-	{
-		window = with(WindowManager) {
-			hint(WindowHint.Defaults)
-			hint(WindowHint.MajorContextVersion, 4)
-			hint(WindowHint.MinorContextVersion, 6)
-			hint(WindowHint.OpenGLProfile, GLFW_OPENGL_CORE_PROFILE)
+	val window = with(WindowManager) {
+		hint(WindowHint.Defaults)
+		hint(WindowHint.MajorContextVersion, 4)
+		hint(WindowHint.MinorContextVersion, 6)
+		hint(WindowHint.OpenGLProfile, GLFW_OPENGL_CORE_PROFILE)
 
-			getVideoMode(primaryMonitor)?.let { l ->
-				val w = l.width()
-				val h = l.height()
-				hint(WindowHint.LocationX, (w - windowSize.x) / 2)
-				hint(WindowHint.LocationY, (h - windowSize.y) / 2)
-			}
-
-			hint(WindowHint.Resizable, true)
-			hint(WindowHint.Visible, false)
-			createWindow("MACHINE WITNESS", windowSize)
+		getVideoMode(primaryMonitor)?.let { l ->
+			val w = l.width()
+			val h = l.height()
+			hint(WindowHint.LocationX, (w - windowSize.x) / 2)
+			hint(WindowHint.LocationY, (h - windowSize.y) / 2)
 		}
 
-		window.setSizeLimits(
-			minSize = 320 to 240,
-			maxSize = null,
-		)
+		hint(WindowHint.Resizable, true)
+		hint(WindowHint.Visible, false)
+		createWindow("MACHINE WITNESS", windowSize).also {
+			it.setSizeLimits(
+				minSize = 320 to 240,
+				maxSize = null,
+			)
+		}
 	}
 
 	fun mouseGrabbedness (gr: Boolean)
@@ -134,74 +127,7 @@ class FPW: AutoCloseable
 	val tex_env_uhh = ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")
 
 	val testFont by lazy {
-		initTestFont(ResourceLocation.of("font/kfont2.lua"))
-	}
-
-	fun initTestFont (fontName: ResourceLocation): Font
-	{
-		LuaCoyote().use { L ->
-			L.openLibraries()
-			val maybe = InputStreamReader(RESOURCES[fontName]!!.openInputStream()).use { stream ->
-				L.run(stream.readText())
-				L.get() as LuaTableValue
-			}
-			val picName = ResourceLocation.of(maybe["source"].toString())
-			val pic = TEXTUREZ.imageManager[picName]
-			L.push(maybe)
-			L.getField(-1, "margin")
-			val margin = if (L.isNumber(-1))
-				L.toNumber(-1)
-			else
-				0.0
-			L.pop(2)
-			val rcpWide = 1.0 / pic.wide
-			val rcpTall = 1.0 / pic.tall
-			val xMargin = margin * rcpWide
-			val yMargin = margin * rcpTall
-			val keyColor = pic[0, 0]
-			val charSet = maybe["chars"].toString()
-			val charCount = charSet.length
-			var mode = false
-			var i = 0
-			var j = 0
-			val stop = pic.wide
-			var currentChar = 0
-			val glf = buildList {
-				while (i < (stop+1) && currentChar < charCount)
-				{
-					val atEnd = i == stop
-					val pixel = pic[i, 0]
-					val whatStage = mode || atEnd
-					if (whatStage)
-					{
-						if (atEnd || pixel == keyColor)
-						{
-							val uv0 = j * rcpWide
-							val uv1 = i * rcpWide
-							this += Font.Glyph(
-								char = charSet[currentChar],
-								patch = Rectangle(uv0+xMargin, yMargin, uv1-xMargin, 1.0-yMargin),
-								advance = i-j,
-								height = pic.tall,
-							)
-							currentChar += 1
-							mode = false
-						}
-					}
-					else
-					{
-						if (pixel != keyColor)
-						{
-							j = i
-							mode = true
-						}
-					}
-
-					i += 1
-				}
-			}
-			return Font(TEXTUREZ.add(fontName, pic), glf, pic.tall).also { pic.close() }
-		}
+		createFont(ResourceLocation.of("font/kfont2.lua"))
 	}
 
 	fun init ()
@@ -323,6 +249,8 @@ class FPW: AutoCloseable
 
 		//#endregion
 
+		//#region gui
+
 		drawClearDepth(1)
 		drawClearMatrices()
 		drawSetCullingEnabled(false)
@@ -341,9 +269,11 @@ class FPW: AutoCloseable
 			testFont,
 			0, 0,
 			0,
-			"So like this one time i ate a Whole Ant!\nI don't know what an ant is :3",
+			"So like this one time i ate a #YWhole Ant!#1\n#HI don't know what an ant is #G:3",
 		)
 		drawWorldMatrix.popMatrix()
+
+		//#endregion
 
 		if (firstFrame)
 		{
@@ -359,14 +289,42 @@ class FPW: AutoCloseable
 		var xText1 = 0
 		var yText1 = 0
 		val spacing = spacing.toInt()
+		val CTL = '#'
 		drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
 			tess.vertexTransform.translate(x.toDouble(), y.toDouble(), 0.0)
-			for (ch in string)
+			var i = 0
+			while (i < string.length)
 			{
+				val ch = string[i]
+				if (ch == CTL)
+				{
+					var skip = true
+					i += 1
+					when (string[i])
+					{
+						CTL -> { skip = false }
+						'R' -> tess.color(Color.RED)
+						'G' -> tess.color(Color.GREEN)
+						'B' -> tess.color(Color.BLUE)
+						'Y' -> tess.color(Color.YELLOW)
+						'C' -> tess.color(Color.CYAN)
+						'M' -> tess.color(Color.MAGENTA)
+						'H' -> tess.color(Color.GRAY)
+						'1', 'W' -> tess.color(Color.WHITE)
+						'0' -> tess.color(Color.BLACK)
+					}
+					if (skip)
+					{
+						i += 1
+						continue
+					}
+				}
+
 				if (ch == '\n')
 				{
 					xText1 = 0
 					yText1 += lh
+					i += 1
 					continue
 				}
 				val charIndex = font[ch] ?: continue
@@ -374,6 +332,7 @@ class FPW: AutoCloseable
 				if (ch == ' ')
 				{
 					xText1 += chAdvance
+					i += 1
 					continue
 				}
 
@@ -385,6 +344,7 @@ class FPW: AutoCloseable
 				tess.vertex(xText1, yText1, 0, chRect.x0, chRect.y0)
 				tess.quad()
 				xText1 += chAdvance + spacing
+				i += 1
 			}
 		}
 	}
