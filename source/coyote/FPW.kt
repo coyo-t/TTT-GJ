@@ -17,10 +17,6 @@ import kotlin.math.sin
 
 class FPW: AutoCloseable
 {
-	val TEXTURE_TRANSPARENT = ResourceLocation.of("texture/transparent")
-	val TEXTURE_BLACK = ResourceLocation.of("texture/black")
-	val TEXTURE_WHITE = ResourceLocation.of("texture/white")
-
 	val windowSize = Vector2i(650, 450)
 	val pevWindowSize = Vector2i(windowSize)
 	val pevMouseCo = Vector2d()
