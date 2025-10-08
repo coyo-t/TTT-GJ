@@ -11,7 +11,6 @@ import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL11C.*
 import org.lwjgl.opengl.GL46C.GL_DEBUG_OUTPUT
 import java.awt.Color
-import java.lang.foreign.Arena
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -21,12 +20,6 @@ class FPW: AutoCloseable
 	val TEXTURE_TRANSPARENT = ResourceLocation.of("texture/transparent")
 	val TEXTURE_BLACK = ResourceLocation.of("texture/black")
 	val TEXTURE_WHITE = ResourceLocation.of("texture/white")
-
-	val TEST_VERTEX_FORMAT = buildVertexFormat {
-		location3D()
-		textureCoord()
-		byteColor()
-	}
 
 	val windowSize = Vector2i(650, 450)
 	val pevWindowSize = Vector2i(windowSize)
@@ -98,10 +91,10 @@ class FPW: AutoCloseable
 		TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
 	}
 	val testSavedModel by lazy {
-		MODELZ[ResourceLocation.of("model/octmeshprev.obj")]
+		MODELZ[ResourceLocation.of("mesh/octmeshprev.obj")]
 	}
 	val model_Crosby by lazy {
-		MODELZ[ResourceLocation.of("model/crosby.obj")]
+		MODELZ[ResourceLocation.of("mesh/crosby.obj")]
 	}
 
 	val testRenderTargetTexture by lazy {
@@ -127,7 +120,7 @@ class FPW: AutoCloseable
 	val tex_env_uhh = ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")
 
 	val testFont by lazy {
-		createFont(ResourceLocation.of("font/kfont2.lua"))
+		FONTZ[ResourceLocation.of("font/kfont2.lua")]
 	}
 
 	fun init ()
@@ -160,13 +153,6 @@ class FPW: AutoCloseable
 		drawSetFlag(GL_DEBUG_OUTPUT, true)
 		drawSetFlag(GL_BLEND, true)
 		drawSetDebugMessageCallback(0L, ::rendererDebugMessage)
-
-		Arena.ofConfined().use { arena ->
-			val pm = arena.allocate(16*16*4)
-			pm.fill(0xFF.toByte())
-			val pic = NativeImage(16, 16, pm)
-			TEXTUREZ.add(TEXTURE_WHITE, pic)
-		}
 		drawSetDepthCompareFunc(GL_LESS)
 		drawSetCullingSide(GL_BACK)
 		drawSetCullingEnabled(true)
@@ -269,7 +255,10 @@ class FPW: AutoCloseable
 			testFont,
 			0, 0,
 			0,
-			"So like this one time i ate a #YWhole Ant!#1\n#HI don't know what an ant is #G:3",
+			arrayOf(
+				"So like this one time i ate a #YWhole Ant!#1",
+				"#HI don't know what an ant is #G:3",
+			).joinToString("\n")
 		)
 		drawWorldMatrix.popMatrix()
 
@@ -283,71 +272,6 @@ class FPW: AutoCloseable
 		window.swapBuffers()
 	}
 
-	private fun drawText (font: Font, spacing: Number, x: Number, y: Number, string: String)
-	{
-		val lh = font.lineHeight
-		var xText1 = 0
-		var yText1 = 0
-		val spacing = spacing.toInt()
-		val CTL = '#'
-		drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
-			tess.vertexTransform.translate(x.toDouble(), y.toDouble(), 0.0)
-			var i = 0
-			while (i < string.length)
-			{
-				val ch = string[i]
-				if (ch == CTL)
-				{
-					var skip = true
-					i += 1
-					when (string[i])
-					{
-						CTL -> { skip = false }
-						'R' -> tess.color(Color.RED)
-						'G' -> tess.color(Color.GREEN)
-						'B' -> tess.color(Color.BLUE)
-						'Y' -> tess.color(Color.YELLOW)
-						'C' -> tess.color(Color.CYAN)
-						'M' -> tess.color(Color.MAGENTA)
-						'H' -> tess.color(Color.GRAY)
-						'1', 'W' -> tess.color(Color.WHITE)
-						'0' -> tess.color(Color.BLACK)
-					}
-					if (skip)
-					{
-						i += 1
-						continue
-					}
-				}
-
-				if (ch == '\n')
-				{
-					xText1 = 0
-					yText1 += lh
-					i += 1
-					continue
-				}
-				val charIndex = font[ch] ?: continue
-				val chAdvance = charIndex.advance
-				if (ch == ' ')
-				{
-					xText1 += chAdvance
-					i += 1
-					continue
-				}
-
-				val chRect = charIndex.patch
-				val fontHeight = charIndex.height
-				tess.vertex(xText1, yText1 + fontHeight, 0, chRect.x0, chRect.y1)
-				tess.vertex(xText1 + chAdvance, yText1 + fontHeight, 0, chRect.x1, chRect.y1)
-				tess.vertex(xText1 + chAdvance, yText1, 0, chRect.x1, chRect.y0)
-				tess.vertex(xText1, yText1, 0, chRect.x0, chRect.y0)
-				tess.quad()
-				xText1 += chAdvance + spacing
-				i += 1
-			}
-		}
-	}
 
 	fun preStep ()
 	{

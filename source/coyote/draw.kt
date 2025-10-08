@@ -22,6 +22,12 @@ import kotlin.jvm.optionals.getOrNull
 @PublishedApi internal val globalTess = Tesselator()
 @PublishedApi internal val globalTessSubmitter = RenderSubmittingTessDigester()
 
+val TEST_VERTEX_FORMAT = buildVertexFormat {
+	location3D()
+	textureCoord()
+	byteColor()
+}
+
 var isInitialized = false
 	private set
 private val currentSurfaceHandle get() = currentSurfaceTarget?.handle ?: 0
@@ -31,19 +37,10 @@ var currentShader: CompiledShaders.ShaderPipeline? = null
 	private set
 lateinit var currentCapabilities: GLCapabilities
 	private set
-val drawGlobalTransform = Matrix4fStack(16)
 
 val drawWorldMatrix = Matrix4fStack(32)
 val drawViewMatrix = Matrix4fStack(16)
 val drawProjectionMatrix = Matrix4fStack(8)
-
-fun drawClearMatrices ()
-{
-	drawWorldMatrix.clear()
-	drawViewMatrix.clear()
-	drawProjectionMatrix.clear()
-}
-
 private val MATRIX_SIZE = ((4*4)*Float.SIZE_BYTES).toLong()
 private val MATRIX_BUFFER_SIZE = MATRIX_SIZE*3L
 private val matrixSegment = Arena.ofAuto().allocate(MATRIX_BUFFER_SIZE).apply {
@@ -61,6 +58,14 @@ private val matrixBuffer by lazy {
 	l
 }
 
+fun drawClearMatrices ()
+{
+	drawWorldMatrix.clear()
+	drawViewMatrix.clear()
+	drawProjectionMatrix.clear()
+}
+
+
 @OptIn(ExperimentalContracts::class)
 inline fun <T> drawMesh (format: VertexFormat, pr:Int, block:(Tesselator)->T): T
 {
@@ -69,6 +74,72 @@ inline fun <T> drawMesh (format: VertexFormat, pr:Int, block:(Tesselator)->T): T
 	val outs = block(globalTess)
 	globalTess.end(globalTessSubmitter.withMode(pr))
 	return outs
+}
+
+fun drawText (font: Font, spacing: Number, x: Number, y: Number, string: String)
+{
+	val lh = font.lineHeight
+	var xText1 = 0
+	var yText1 = 0
+	val spacing = spacing.toInt()
+	val CTL = '#'
+	drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
+		tess.vertexTransform.translate(x.toDouble(), y.toDouble(), 0.0)
+		var i = 0
+		while (i < string.length)
+		{
+			val ch = string[i]
+			if (ch == CTL)
+			{
+				var skip = true
+				i += 1
+				when (string[i])
+				{
+					CTL -> { skip = false }
+					'R' -> tess.color(Color.RED)
+					'G' -> tess.color(Color.GREEN)
+					'B' -> tess.color(Color.BLUE)
+					'Y' -> tess.color(Color.YELLOW)
+					'C' -> tess.color(Color.CYAN)
+					'M' -> tess.color(Color.MAGENTA)
+					'H' -> tess.color(Color.GRAY)
+					'1', 'W' -> tess.color(Color.WHITE)
+					'0' -> tess.color(Color.BLACK)
+				}
+				if (skip)
+				{
+					i += 1
+					continue
+				}
+			}
+
+			if (ch == '\n')
+			{
+				xText1 = 0
+				yText1 += lh
+				i += 1
+				continue
+			}
+			val charIndex = font[ch] ?: continue
+			val chAdvance = charIndex.advance
+			if (ch == ' ')
+			{
+				xText1 += chAdvance
+				i += 1
+				continue
+			}
+
+			val chRect = charIndex.patch
+			val fontHeight = charIndex.height
+			tess.vertex(xText1, yText1 + fontHeight, 0, chRect.x0, chRect.y1)
+			tess.vertex(xText1 + chAdvance, yText1 + fontHeight, 0, chRect.x1, chRect.y1)
+			tess.vertex(xText1 + chAdvance, yText1, 0, chRect.x1, chRect.y0)
+			tess.vertex(xText1, yText1, 0, chRect.x0, chRect.y0)
+			tess.quad()
+			xText1 += chAdvance + spacing
+			i += 1
+		}
+	}
 }
 
 fun drawBlitSurfaces (
