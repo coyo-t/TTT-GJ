@@ -129,7 +129,8 @@ class ModelManager (val resourceManager: ResourceManager)
 					}
 				}
 				"vt" -> {
-					uvs += Vector2d(payload.toDoubles())
+					val fuck = payload.toDoubles()
+					uvs += Vector2d(fuck[0], 1.0 - fuck[1])
 				}
 				"vn" -> {
 					normals += Vector3d(payload.toDoubles())

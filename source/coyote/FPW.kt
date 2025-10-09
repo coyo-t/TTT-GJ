@@ -97,7 +97,8 @@ class FPW: AutoCloseable
 		MESHEZ[ResourceLocation.of("mesh/octmeshprev.obj")]
 	}
 	val model_Crosby by lazy {
-		MESHEZ[ResourceLocation.of("mesh/crosby.obj")]
+		modsz.loadModel(ResourceLocation.of("model/crosby.lua"))
+//		MESHEZ[ResourceLocation.of("mesh/crosby.obj")]
 	}
 
 	val testRenderTargetTexture by lazy {
@@ -124,6 +125,10 @@ class FPW: AutoCloseable
 
 	val testFont by lazy {
 		FONTZ[ResourceLocation.of("font/kfont2.lua")]
+	}
+
+	val osFont by lazy {
+		FONTZ[ResourceLocation.of("font/os.lua")]
 	}
 
 	fun init ()
@@ -232,10 +237,10 @@ class FPW: AutoCloseable
 			identity()
 			translate(0f, 0f, 0f)
 		}
-		drawBindTexture(0, texture_Untextured)
-		drawSetShader(shader_Crosby)
-		drawSubmit(model_Crosby, GL_TRIANGLES)
-
+//		drawBindTexture(0, texture_Untextured)
+//		drawSetShader(shader_Crosby)
+//		drawSubmit(model_Crosby, GL_TRIANGLES)
+		model_Crosby.draw(TEXTUREZ, SHADERZ)
 		testMommy.draw(TEXTUREZ, SHADERZ)
 
 //		drawBindTexture(0, TEXTUREZ[ResourceLocation.of("texture/the pod people trumpy.kra")])
@@ -258,17 +263,22 @@ class FPW: AutoCloseable
 		}
 
 		drawSetBlendMode(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-		drawSetShader(shaderTest_uniformBlocks)
-		drawBindTexture(0, testFont.texture)
 
 		drawWorldMatrix.pushMatrix().scale(screenScalar.scale.toFloat())
+		drawSetShader(shaderTest_uniformBlocks)
 		drawText(
-			testFont,
+			osFont,
 			0, 0,
 			0,
 			arrayOf(
 				"So like this one time i ate a #YWhole Ant!#1",
-				"#HI don't know what an ant is #G:3",
+				"#HI don't know what an ant is #G#_1:3#_0",
+				"#_1#1this has 1 #CWhole Unit#1 of spacing now.",
+				"The #Ofirst 2 l1nez had no spacing#1. I kind of like it, but it looks bad with punctuation >.>\"",
+				"Yes, I added an #R#_3Entire Fucking Command#_1#1 for this :]",
+				"also, #Ydingus mcgee#1 over here forgot the [], {}, AND () characters!!",
+				"#H(this caused an Infinite Loop -.- )#0",
+				"#T1 SW34R TO GOD 3V3RY T1M3 1 4DD ON3 OF MY FUNNY 4SC11 F4C3S 1 F1ND 1 FORGOT 4NOTH3R SYMBOL!!!#1"
 			).joinToString("\n")
 		)
 		drawWorldMatrix.popMatrix()

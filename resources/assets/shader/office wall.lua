@@ -69,7 +69,7 @@ return {
 			vec3 uhh = baseTexture * shaderz;
 			uhh = mix(blendOverlay(uhh, vec3(v_v.color.y)), uhh, 0.5);
 
-			pixel = vec4(uhh * finLight, 1.0);
+			pixel = vec4(baseTexture, 1.0);
 		}
 	]]
 }

@@ -1,7 +1,7 @@
 -- TODO named uniform references/usages
 local function MAT (oname, tex, sha)
 	if sha == nil then
-		sha = 'crosby.lua'
+		sha = 'office wall.lua'
 	end
 	sha = 'shader/'..sha
 	return {
@@ -23,6 +23,6 @@ return {
 		MAT('wall_concrete_thing', 'surface/cracked concrete.png'),
 		MAT('wall_lower_rim', 'surface/lower wall rim.png'),
 		MAT('wall_main', 'surface/office wall.kra', 'office wall.lua'),
-		MAT('wall_upper_rim', 'surface/lower wall rim.png'),
+		MAT('wall_upper_rim', 'surface/upper wall rim.png'),
 	},
 }

@@ -81,8 +81,9 @@ fun drawText (font: Font, spacing: Number, x: Number, y: Number, string: String)
 	val lh = font.lineHeight
 	var xText1 = 0
 	var yText1 = 0
-	val spacing = spacing.toInt()
+	var spacing = spacing.toInt()
 	val CTL = '#'
+	drawBindTexture(0, font.texture)
 	drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
 		tess.vertexTransform.translate(x.toDouble(), y.toDouble(), 0.0)
 		var i = 0
@@ -101,10 +102,17 @@ fun drawText (font: Font, spacing: Number, x: Number, y: Number, string: String)
 					'B' -> tess.color(Color.BLUE)
 					'Y' -> tess.color(Color.YELLOW)
 					'C' -> tess.color(Color.CYAN)
+					'T' -> tess.color(Color.CYAN.darker())
 					'M' -> tess.color(Color.MAGENTA)
+					'O' -> tess.color(Color.ORANGE)
 					'H' -> tess.color(Color.GRAY)
 					'1', 'W' -> tess.color(Color.WHITE)
 					'0' -> tess.color(Color.BLACK)
+					'_' -> {
+						i += 1
+						val news = string[i].digitToIntOrNull() ?: 0
+						spacing = news
+					}
 				}
 				if (skip)
 				{
@@ -120,7 +128,12 @@ fun drawText (font: Font, spacing: Number, x: Number, y: Number, string: String)
 				i += 1
 				continue
 			}
-			val charIndex = font[ch] ?: continue
+			val charIndex = font[ch]
+			if (charIndex == null)
+			{
+				i += 1
+				continue
+			}
 			val chAdvance = charIndex.advance
 			if (ch == ' ')
 			{
