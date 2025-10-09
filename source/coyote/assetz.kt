@@ -1,5 +1,6 @@
 package coyote
 
+import coyote.lua.LuaCoyote
 import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager

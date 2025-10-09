@@ -1,6 +1,6 @@
 package coyote.resource
 
-import coyote.LuaCoyote
+import coyote.lua.LuaCoyote
 import party.iroiro.luajava.value.LuaTableValue
 import java.nio.channels.FileChannel
 import java.nio.file.FileSystem

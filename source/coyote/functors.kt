@@ -171,6 +171,7 @@ inline fun buildModel (format: VertexFormat, cb: Tesselator.()->Unit): Tesselato
 	return tess.end(SavingTessDigester())
 }
 
-
+fun Resource.readText ()
+	= InputStreamReader(openInputStream(StandardOpenOption.READ)).use(InputStreamReader::readText)
 fun Resource.readTextLines ()
-	= InputStreamReader(openInputStream(StandardOpenOption.READ)).use { it.readLines() }
+	= InputStreamReader(openInputStream(StandardOpenOption.READ)).use(InputStreamReader::readLines)

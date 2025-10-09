@@ -76,7 +76,8 @@ class FPW: AutoCloseable
 	val modsz = ModelManager(RESOURCES)
 
 	val testMommy by lazy {
-		modsz.loadWavefront(RESOURCES[ResourceLocation.of("mesh/player space.obj")]!!)
+//		modsz.loadWavefront(RESOURCES[ResourceLocation.of("mesh/player space.obj")]!!)
+		modsz.loadModel(ResourceLocation.of("model/player space.lua"))
 	}
 
 	val shaderTest_uniformBlocks by lazy {
@@ -159,7 +160,7 @@ class FPW: AutoCloseable
 		drawSetCullingSide(GL_BACK)
 		drawSetCullingEnabled(true)
 
-
+		val uhh = testMommy
 	}
 
 	fun draw ()
@@ -235,11 +236,13 @@ class FPW: AutoCloseable
 		drawSetShader(shader_Crosby)
 		drawSubmit(model_Crosby, GL_TRIANGLES)
 
-		drawBindTexture(0, TEXTUREZ[ResourceLocation.of("texture/the pod people trumpy.kra")])
-		for (it in testMommy)
-		{
-			drawSubmit(it, GL_TRIANGLES)
-		}
+		testMommy.draw(TEXTUREZ, SHADERZ)
+
+//		drawBindTexture(0, TEXTUREZ[ResourceLocation.of("texture/the pod people trumpy.kra")])
+//		for (it in testMommy.values)
+//		{
+//			drawSubmit(it, GL_TRIANGLES)
+//		}
 
 		//#endregion
 

@@ -1,6 +1,6 @@
 package coyote.ren
 
-import coyote.LuaCoyote
+import coyote.lua.LuaCoyote
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
 import org.lwjgl.opengl.GL46C.*

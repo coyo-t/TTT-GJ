@@ -14,9 +14,7 @@ local function MAT (oname, tex, sha)
 end
 
 return {
-	meshes = {
-		'mesh/player space.obj',
-	},
+	mesh = 'mesh/player space.obj',
 	materials = {
 		MAT('carpet_not_carpet_separator', 'surface/floor separator.png'),
 		MAT('ceiling', 'surface/popcorn ceiling.kra'),

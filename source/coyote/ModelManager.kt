@@ -3,15 +3,22 @@ package coyote
 import coyote.geom.SavingTessDigester
 import coyote.geom.Tesselator
 import coyote.geom.TesselatorStore
+import coyote.lua.LuaCoyote
+import coyote.lua.asInteger
+import coyote.lua.asString
+import coyote.ren.CompiledShaders
+import coyote.ren.ShaderAsset
 import coyote.resource.Resource
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
 import org.joml.Vector2d
 import org.joml.Vector3d
 import org.joml.Vector4d
+import org.lwjgl.opengl.GL11.GL_TRIANGLES
 
 class ModelManager (val resourceManager: ResourceManager)
 {
+	private val models = mutableMapOf<ResourceLocation, Model>()
 	val FORMAT = buildVertexFormat {
 		location3D()
 		textureCoord()
@@ -25,12 +32,71 @@ class ModelManager (val resourceManager: ResourceManager)
 		}
 	}
 
-	fun loadModel (name: ResourceLocation)
+	fun loadModel (name: ResourceLocation): Model
 	{
-		TODO()
+		if (name in models)
+			return models.getValue(name)
+
+		val result = requireNotNull(L.runWithTableResult(resourceManager[name])) {
+			TODO("error model")
+		}
+		val meshName = requireNotNull(result["mesh"].asString())
+		val mesh = loadWavefront(resourceManager[ResourceLocation.of(meshName)]!!)
+
+		var mIndex = 0
+		val materialDefines = L.safeGetTable(result["materials"])
+		val materials = materialDefines.values.associate { mDef ->
+			val objName = mDef["obj_name"].asString()!!
+			val shName = mDef["shader"].asString()!!
+			val textureNames = L.safeGetTable(mDef["textures"])
+			val textures = textureNames.map { (psi, ptn) ->
+				psi.asInteger().toInt() to ResourceLocation.of(ptn.asString()!!)
+			}
+			mesh[objName]!! to MaterialDefine(
+				mIndex,
+				ResourceLocation.of(shName),
+				textures,
+			).also { mIndex += 1 }
+		}
+		return Model(mesh.values.toList(), materials).also { models[name] = it }
+	}
+	// this is really shitty
+	class Model(
+		val meshes: List<TesselatorStore>,
+		val materials: Map<TesselatorStore, MaterialDefine>
+	)
+	{
+		val materialTextures = arrayOfNulls<List<Pair<Int, Texture>>>(materials.size)
+		val materialShaders = arrayOfNulls<CompiledShaders.ShaderPipeline>(materials.size)
+
+		fun draw (textureManager: TextureManager, shaderManager: CompiledShaders)
+		{
+			for (mesh in meshes)
+			{
+				val mdef = requireNotNull(materials[mesh])
+				val index = mdef.index
+				val texture = materialTextures[index] ?: mdef.textures.map { (i,t) ->
+					i to textureManager[t]
+				}.also { materialTextures[index] = it }
+
+				val shader = materialShaders[index] ?: shaderManager[mdef.shader].also { materialShaders[index] = it }
+				drawSetShader(shader)
+				for ((i,t) in texture)
+				{
+					drawBindTexture(i, t)
+				}
+				drawSubmit(mesh, GL_TRIANGLES)
+			}
+		}
 	}
 
-	fun loadWavefront (src: Resource): List<TesselatorStore>
+	class MaterialDefine (
+		val index: Int,
+		val shader: ResourceLocation,
+		val textures: List<Pair<Int, ResourceLocation>>,
+	)
+
+	fun loadWavefront (src: Resource): Map<String, TesselatorStore>
 	{
 		val lines = src.readTextLines().filterNot(String::isBlank).map(String::trim)
 
@@ -128,8 +194,7 @@ class ModelManager (val resourceManager: ResourceManager)
 		}
 
 		val stomach = SavingTessDigester()
-		val things = materialTesselators.values.map { it.end(stomach) }.filterNot { it.vertexCount == 0 }
-		return things
+		return materialTesselators.map { (k,v) -> k to v.end(stomach) }.filterNot { (_,v) -> v.vertexCount == 0 }.toMap()
 	}
 
 	private fun String.toDoubles (): DoubleArray
@@ -156,7 +221,7 @@ class ModelManager (val resourceManager: ResourceManager)
 			INITIALATE_LIBRARIAN_SOULS()
 			println(";)")
 			val test = ModelManager(RESOURCES)
-			test.loadWavefront(RESOURCES.get(ResourceLocation.of("mesh/player space.obj"))!!)
+			test.loadModel(ResourceLocation.of("model/player space.lua"))
 		}
 	}
 
