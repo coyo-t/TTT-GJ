@@ -73,6 +73,12 @@ class FPW: AutoCloseable
 			window.setCursorMode(GLFW_CURSOR_NORMAL)
 	}
 
+	val modsz = ModelManager(RESOURCES)
+
+	val testMommy by lazy {
+		modsz.loadWavefront(RESOURCES[ResourceLocation.of("mesh/player space.obj")]!!)
+	}
+
 	val shaderTest_uniformBlocks by lazy {
 		SHADERZ[ResourceLocation.of("shader/test.lua")]
 	}
@@ -87,10 +93,10 @@ class FPW: AutoCloseable
 		TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
 	}
 	val testSavedModel by lazy {
-		MODELZ[ResourceLocation.of("mesh/octmeshprev.obj")]
+		MESHEZ[ResourceLocation.of("mesh/octmeshprev.obj")]
 	}
 	val model_Crosby by lazy {
-		MODELZ[ResourceLocation.of("mesh/crosby.obj")]
+		MESHEZ[ResourceLocation.of("mesh/crosby.obj")]
 	}
 
 	val testRenderTargetTexture by lazy {
@@ -228,6 +234,12 @@ class FPW: AutoCloseable
 		drawBindTexture(0, texture_Untextured)
 		drawSetShader(shader_Crosby)
 		drawSubmit(model_Crosby, GL_TRIANGLES)
+
+		drawBindTexture(0, TEXTUREZ[ResourceLocation.of("texture/the pod people trumpy.kra")])
+		for (it in testMommy)
+		{
+			drawSubmit(it, GL_TRIANGLES)
+		}
 
 		//#endregion
 

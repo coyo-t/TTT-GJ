@@ -10,18 +10,24 @@ val RESOURCE_PATH = Path("./resources/").normalize().toAbsolutePath()
 val ASSETS_PATH = RESOURCE_PATH/"assets"
 val DATA_PATH = RESOURCE_PATH/"data"
 
+fun INITIALATE_LIBRARIAN_SOULS ()
+{
+	// this is precarious >:/
+	val LP = DATA_PATH/"dll/"
+	loadSystemLibrary(LP/"lua5464.dll")
+	Configuration.LIBRARY_PATH.set((LP/"org/lwjgl").normalize().toAbsolutePath().invariantSeparatorsPathString)
+}
 
 fun main (vararg args: String)
 {
 	var game: FPW? = null
 	try
 	{
-		// this is precarious >:/
-		val LP = DATA_PATH/"dll/"
-		loadSystemLibrary(LP/"lua5464.dll")
-		Configuration.LIBRARY_PATH.set((LP/"org/lwjgl").normalize().toAbsolutePath().invariantSeparatorsPathString)
+		INITIALATE_LIBRARIAN_SOULS()
 		WindowManager.init()
 		println(":)")
+
+
 		game = FPW()
 		game.init()
 		while (true)

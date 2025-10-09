@@ -14,6 +14,9 @@ local function MAT (oname, tex, sha)
 end
 
 return {
+	meshes = {
+		'mesh/player space.obj',
+	},
 	materials = {
 		MAT('carpet_not_carpet_separator', 'surface/floor separator.png'),
 		MAT('ceiling', 'surface/popcorn ceiling.kra'),
@@ -23,12 +26,5 @@ return {
 		MAT('wall_lower_rim', 'surface/lower wall rim.png'),
 		MAT('wall_main', 'surface/office wall.kra', 'office wall.lua'),
 		MAT('wall_upper_rim', 'surface/lower wall rim.png'),
-	},
-	{
-		name = 'debugminicrosby',
-		shader = 'shader/crosby.lua',
-		textures = {
-			'texture/untextured.png',
-		},
 	},
 }

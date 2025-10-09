@@ -122,7 +122,7 @@ class OBJModelManager(val resourceManager: ResourceManager)
 			//TODO bigass glowing "ERROR" model
 			System.err.println("error loading obj model")
 			e.printStackTrace()
-			return TesselatorStore.Companion.NON.also { nt[rl] = it }
+			return TesselatorStore.NON.also { nt[rl] = it }
 		}
 	}
 

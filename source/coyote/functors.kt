@@ -5,6 +5,7 @@ import coyote.geom.Tesselator
 import coyote.geom.TesselatorStore
 import coyote.geom.VertexFormat
 import coyote.geom.VertexFormatBuilder
+import coyote.resource.Resource
 import coyote.resource.ResourceLocation
 import org.joml.Matrix4fc
 import org.joml.Vector3d
@@ -17,6 +18,7 @@ import java.lang.foreign.ValueLayout.JAVA_FLOAT
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -169,3 +171,6 @@ inline fun buildModel (format: VertexFormat, cb: Tesselator.()->Unit): Tesselato
 	return tess.end(SavingTessDigester())
 }
 
+
+fun Resource.readTextLines ()
+	= InputStreamReader(openInputStream(StandardOpenOption.READ)).use { it.readLines() }

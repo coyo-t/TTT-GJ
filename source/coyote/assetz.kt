@@ -9,7 +9,7 @@ import java.io.InputStreamReader
 val RESOURCES = ResourceManager(ASSETS_PATH)
 val SHADERZ = CompiledShaders(RESOURCES)
 val TEXTUREZ = TextureManager(RESOURCES)
-val MODELZ = OBJModelManager(RESOURCES)
+val MESHEZ = OBJModelManager(RESOURCES)
 
 object FONTZ {
 	val FZ = mutableMapOf<ResourceLocation, Font>()
