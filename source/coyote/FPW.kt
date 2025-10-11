@@ -4,6 +4,7 @@ import coyote.resource.ResourceLocation
 import coyote.window.WindowHint
 import coyote.window.WindowManager
 import org.joml.Math.lerp
+import org.joml.Matrix4f
 import org.joml.Vector2d
 import org.joml.Vector2i
 import org.joml.Vector3d
@@ -75,7 +76,7 @@ class FPW: AutoCloseable
 
 	val modsz = ModelManager(RESOURCES)
 
-	val testMommy by lazy {
+	val model_PlayerSpace by lazy {
 //		modsz.loadWavefront(RESOURCES[ResourceLocation.of("mesh/player space.obj")]!!)
 		modsz.loadModel(ResourceLocation.of("model/player space.lua"))
 	}
@@ -98,7 +99,9 @@ class FPW: AutoCloseable
 	}
 	val model_Crosby by lazy {
 		modsz.loadModel(ResourceLocation.of("model/crosby.lua"))
-//		MESHEZ[ResourceLocation.of("mesh/crosby.obj")]
+	}
+	val model_DingusMachine by lazy {
+		modsz.loadModel(ResourceLocation.of("model/dingus machine.lua"))
 	}
 
 	val testRenderTargetTexture by lazy {
@@ -164,9 +167,10 @@ class FPW: AutoCloseable
 		drawSetDepthCompareFunc(GL_LESS)
 		drawSetCullingSide(GL_BACK)
 		drawSetCullingEnabled(true)
-
-		val uhh = testMommy
 	}
+
+	private val viewRotationMatrix = Matrix4f()
+	private val viewMatrixTranslated = Matrix4f()
 
 	fun draw ()
 	{
@@ -211,7 +215,6 @@ class FPW: AutoCloseable
 		drawSetDepthTestEnable(true)
 		drawSetDepthWriteEnable(true)
 		drawSetViewPort(winWide, winTall)
-		drawClearDepth(1)
 
 		// camera
 		drawClearMatrices()
@@ -219,35 +222,42 @@ class FPW: AutoCloseable
 		{
 			perspective(70f, windowSize.x.toFloat() / windowSize.y, 0.001f, 100f)
 		}
-		with (drawViewMatrix)
-		{
+
+		with (viewRotationMatrix) {
+			identity()
 			rotateX(viewPitch.toRadiansf())
 			rotateY(viewYaw.toRadiansf())
+		}
+		with (viewMatrixTranslated) {
+			set(viewRotationMatrix)
 			translate(-viewCo.x.toFloat(), -viewCo.y.toFloat(), -viewCo.z.toFloat())
 		}
+		drawViewMatrix.set(viewRotationMatrix)
 
 		// env
+		drawSetDepthWriteEnable(true)
+		drawSetDepthTestEnable(false)
 		drawSetShader(shaderTest_storedOBJ)
 		drawBindTexture(0, TEXTUREZ[tex_env_uhh])
 		drawBindTexture(1, testRenderTargetTexture)
 		drawSubmit(testSavedModel, GL_TRIANGLES)
+		drawClearDepth(1)
 
 		// crosby
+		drawSetDepthWriteEnable(true)
+		drawSetDepthTestEnable(true)
+		drawViewMatrix.set(viewMatrixTranslated)
 		drawWorldMatrix.apply {
 			identity()
 			translate(0f, 0f, 0f)
 		}
-//		drawBindTexture(0, texture_Untextured)
-//		drawSetShader(shader_Crosby)
-//		drawSubmit(model_Crosby, GL_TRIANGLES)
-		model_Crosby.draw(TEXTUREZ, SHADERZ)
-		testMommy.draw(TEXTUREZ, SHADERZ)
 
-//		drawBindTexture(0, TEXTUREZ[ResourceLocation.of("texture/the pod people trumpy.kra")])
-//		for (it in testMommy.values)
-//		{
-//			drawSubmit(it, GL_TRIANGLES)
-//		}
+		model_PlayerSpace.draw(TEXTUREZ, SHADERZ)
+		drawWorldMatrix.pushMatrix().translate(0f, 0.985588f, -3f)
+		model_DingusMachine.draw(TEXTUREZ, SHADERZ)
+		drawWorldMatrix.popMatrix()
+		model_Crosby.draw(TEXTUREZ, SHADERZ)
+
 
 		//#endregion
 

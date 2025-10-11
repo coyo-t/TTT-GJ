@@ -59,17 +59,12 @@ return {
 
 		void main ()
 		{
-			vec4 tex1 = texture(gm_BaseTexture, v_v.texture);
-			// half lambert'd
-			float light = dot(v_v.normal, normalize(vec3(1, 1, 0))) * 0.5 + 0.5;
-			vec3 finLight = vec3(max(light, 0.0));
-
 			vec3 baseTexture = texture(gm_BaseTexture, v_v.texture).xyz;
-			float shaderz = mix(1.0, v_v.color.x, 0.9);
-			vec3 uhh = baseTexture * shaderz;
-			uhh = mix(blendOverlay(uhh, vec3(v_v.color.y)), uhh, 0.5);
+			vec3 uhh = baseTexture;
+			uhh = mix(uhh + (v_v.color.y * 2 - 1) * 0.25, uhh, 0.726667);
+			//uhh = mix(blendOverlay(uhh, vec3(v_v.color.y)), uhh, 0.726667);
 
-			pixel = vec4(baseTexture, 1.0);
+			pixel = vec4(uhh, 1.0);
 		}
 	]]
 }

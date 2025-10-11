@@ -7,14 +7,14 @@ import coyote.lua.LuaCoyote
 import coyote.lua.asInteger
 import coyote.lua.asString
 import coyote.ren.CompiledShaders
-import coyote.ren.ShaderAsset
-import coyote.resource.Resource
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
 import org.joml.Vector2d
 import org.joml.Vector3d
 import org.joml.Vector4d
 import org.lwjgl.opengl.GL11.GL_TRIANGLES
+import party.iroiro.luajava.Lua
+import party.iroiro.luajava.value.LuaTableValue
 
 class ModelManager (val resourceManager: ResourceManager)
 {
@@ -32,6 +32,8 @@ class ModelManager (val resourceManager: ResourceManager)
 		}
 	}
 
+
+
 	fun loadModel (name: ResourceLocation): Model
 	{
 		if (name in models)
@@ -40,8 +42,34 @@ class ModelManager (val resourceManager: ResourceManager)
 		val result = requireNotNull(L.runWithTableResult(resourceManager[name])) {
 			TODO("error model")
 		}
-		val meshName = requireNotNull(result["mesh"].asString())
-		val mesh = loadWavefront(resourceManager[ResourceLocation.of(meshName)]!!)
+		val meshNameField = result["mesh"]
+		val sourceLines = if (meshNameField is LuaTableValue)
+		{
+			val maybeSource = meshNameField["data"]
+			if (maybeSource.type() != Lua.LuaType.NIL)
+			{
+				maybeSource.asString()!!.lines()
+			}
+			else
+			{
+				val maybePathTo = meshNameField["path"]
+				if (maybePathTo.type() != Lua.LuaType.NIL)
+				{
+					resourceManager[ResourceLocation.of(maybePathTo.asString()!!)]!!.readTextLines()
+				}
+				else
+				{
+					null
+				}
+			}
+		}
+		else
+		{
+			null
+		}
+		requireNotNull(sourceLines) { "DINGUS @ '$name'" }
+
+		val mesh = loadWavefront(sourceLines)
 
 		var mIndex = 0
 		val materialDefines = L.safeGetTable(result["materials"])
@@ -52,7 +80,10 @@ class ModelManager (val resourceManager: ResourceManager)
 			val textures = textureNames.map { (psi, ptn) ->
 				psi.asInteger().toInt() to ResourceLocation.of(ptn.asString()!!)
 			}
-			mesh[objName]!! to MaterialDefine(
+			val meshN = requireNotNull(mesh[objName]) {
+				"no such material named '$objName' declared by wavefront"
+			}
+			meshN to MaterialDefine(
 				mIndex,
 				ResourceLocation.of(shName),
 				textures,
@@ -96,9 +127,9 @@ class ModelManager (val resourceManager: ResourceManager)
 		val textures: List<Pair<Int, ResourceLocation>>,
 	)
 
-	fun loadWavefront (src: Resource): Map<String, TesselatorStore>
+	fun loadWavefront (srcLines: List<String>): Map<String, TesselatorStore>
 	{
-		val lines = src.readTextLines().filterNot(String::isBlank).map(String::trim)
+		val lines = srcLines.filterNot(String::isBlank).map(String::trim)
 
 		val locations = mutableListOf<WavefrontVType>()
 		val uvs = mutableListOf<Vector2d>()
