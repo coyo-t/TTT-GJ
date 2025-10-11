@@ -1,7 +1,7 @@
 -- TODO named uniform references/usages
 local function MAT (oname, tex, sha)
 	if sha == nil then
-		sha = 'office wall.lua'
+		sha = 'prop.lua'
 	end
 	sha = 'shader/'..sha
 	return {

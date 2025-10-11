@@ -64,6 +64,10 @@ class FPW: AutoCloseable
 			)
 		}
 	}
+	private val TV_TRANSFORM = Matrix4f().apply {
+		translate(0f, 1.16987f, 2.98253f)
+		rotateY(180.0.toRadiansf())
+	}
 
 	private val viewRotationMatrix = Matrix4f()
 	private val viewMatrixTranslated = Matrix4f()
@@ -107,6 +111,14 @@ class FPW: AutoCloseable
 	}
 	val model_DingusMachine by lazy {
 		modsz.loadModel(ResourceLocation.of("model/dingus machine.lua"))
+	}
+
+	val model_TV by lazy {
+		modsz.loadModel(ResourceLocation.of("model/tv.lua"))
+	}
+
+	val model_TVScreenOff by lazy {
+		modsz.loadModel(ResourceLocation.of("model/tv screen off.lua"))
 	}
 
 	val testRenderTargetTexture by lazy {
@@ -283,6 +295,11 @@ class FPW: AutoCloseable
 		drawWorldMatrix.pushMatrix {
 			translate(0f, 0.985588f, -3f)
 			model_DingusMachine.draw(TEXTUREZ, SHADERZ)
+		}
+		drawWorldMatrix.pushMatrix {
+			mul(TV_TRANSFORM)
+			model_TV.draw(TEXTUREZ, SHADERZ)
+			model_TVScreenOff.draw(TEXTUREZ, SHADERZ)
 		}
 		model_Crosby.draw(TEXTUREZ, SHADERZ)
 

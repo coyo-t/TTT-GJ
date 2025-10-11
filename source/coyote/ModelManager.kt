@@ -89,10 +89,11 @@ class ModelManager (val resourceManager: ResourceManager)
 				textures,
 			).also { mIndex += 1 }
 		}
-		return Model(mesh.values.toList(), materials).also { models[name] = it }
+		return Model(name, mesh.values.toList(), materials).also { models[name] = it }
 	}
 	// this is really shitty
 	class Model(
+		val name: ResourceLocation,
 		val meshes: List<TesselatorStore>,
 		val materials: Map<TesselatorStore, MaterialDefine>
 	)
@@ -104,7 +105,9 @@ class ModelManager (val resourceManager: ResourceManager)
 		{
 			for (mesh in meshes)
 			{
-				val mdef = requireNotNull(materials[mesh])
+				val mdef = requireNotNull(materials[mesh]) {
+					"no material for mesh $mesh (model '$name')"
+				}
 				val index = mdef.index
 				val texture = materialTextures[index] ?: mdef.textures.map { (i,t) ->
 					i to textureManager[t]
