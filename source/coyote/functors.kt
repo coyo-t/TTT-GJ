@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalContracts::class)
+
 package coyote
 
 import coyote.geom.SavingTessDigester
@@ -7,6 +9,7 @@ import coyote.geom.VertexFormat
 import coyote.geom.VertexFormatBuilder
 import coyote.resource.Resource
 import coyote.resource.ResourceLocation
+import org.joml.Matrix4fStack
 import org.joml.Matrix4fc
 import org.joml.Vector3d
 import org.lwjgl.opengl.GL45C.*
@@ -175,3 +178,14 @@ fun Resource.readText ()
 	= InputStreamReader(openInputStream(StandardOpenOption.READ)).use(InputStreamReader::readText)
 fun Resource.readTextLines ()
 	= InputStreamReader(openInputStream(StandardOpenOption.READ)).use(InputStreamReader::readLines)
+
+inline fun <T> Matrix4fStack.pushMatrix (cb: Matrix4fStack.()->T): T
+{
+	contract { callsInPlace(cb, InvocationKind.EXACTLY_ONCE) }
+	pushMatrix()
+	val outs = cb.invoke(this)
+	popMatrix()
+	return outs
+}
+
+

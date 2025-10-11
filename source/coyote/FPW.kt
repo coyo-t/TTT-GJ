@@ -65,6 +65,11 @@ class FPW: AutoCloseable
 		}
 	}
 
+	private val viewRotationMatrix = Matrix4f()
+	private val viewMatrixTranslated = Matrix4f()
+	private val camera3dSwayMatrix = Matrix4f()
+	private val camera3dInverseSwayMatrix = Matrix4f()
+
 	fun mouseGrabbedness (gr: Boolean)
 	{
 		mouseGrabbed = gr
@@ -134,6 +139,29 @@ class FPW: AutoCloseable
 		FONTZ[ResourceLocation.of("font/os.lua")]
 	}
 
+	fun pushInviewIdleBob (time:Double, to: Matrix4f)
+	{
+		var pfac = 0.4
+		pfac *= pfac
+
+		val t = time * Math.PI
+
+		val bobx = ((sin(t * .9)  * (.05 + pfac * .5)) + (1.25 * pfac)).toRadians()
+		val boby = ((cos(t * .45) * (.1 + pfac * 1.8))).toRadians()
+
+		with (to)
+		{
+			mapXnZY()
+			rotateX(bobx.toFloat())
+			rotateY(boby.toFloat())
+			rotateZ(-boby.toFloat() * 2)
+			mapXZnY()
+		}
+
+//		mats.push(matrix_build(0, 0, 0, bobx,boby,-boby * 2., 1,1,1))
+
+	}
+
 	fun init ()
 	{
 		window.setRawMouseMotion(true)
@@ -169,13 +197,11 @@ class FPW: AutoCloseable
 		drawSetCullingEnabled(true)
 	}
 
-	private val viewRotationMatrix = Matrix4f()
-	private val viewMatrixTranslated = Matrix4f()
-
 	fun draw ()
 	{
 		val winWide = windowSize.x
 		val winTall = windowSize.y
+		val time = WindowManager.time
 		drawToSurface(testSurface) {
 			val (wide, tall) = testRenderTargetTexture.size
 			drawClearMatrices()
@@ -225,6 +251,7 @@ class FPW: AutoCloseable
 
 		with (viewRotationMatrix) {
 			identity()
+			pushInviewIdleBob(time, this)
 			rotateX(viewPitch.toRadiansf())
 			rotateY(viewYaw.toRadiansf())
 		}
@@ -253,9 +280,10 @@ class FPW: AutoCloseable
 		}
 
 		model_PlayerSpace.draw(TEXTUREZ, SHADERZ)
-		drawWorldMatrix.pushMatrix().translate(0f, 0.985588f, -3f)
-		model_DingusMachine.draw(TEXTUREZ, SHADERZ)
-		drawWorldMatrix.popMatrix()
+		drawWorldMatrix.pushMatrix {
+			translate(0f, 0.985588f, -3f)
+			model_DingusMachine.draw(TEXTUREZ, SHADERZ)
+		}
 		model_Crosby.draw(TEXTUREZ, SHADERZ)
 
 
