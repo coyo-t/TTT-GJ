@@ -37,4 +37,15 @@ sprr(1, 'south')
 sprr(2, 'east')
 sprr(3, 'north')
 
-
+add_sprite {
+	name = 'miana joy',
+	source = 'texture/sprite/miana joy.png',
+	size = { 64, 32 },
+	sub_images = {
+		[0]={ co = { 0, 0 } },
+		[1]={ co = { 0, 32 } },
+		[2]={ co = { 0, 64 } },
+		[3]={ co = { 0, 96 } },
+		[4]={ co = { 0, 128 } },
+	},
+}

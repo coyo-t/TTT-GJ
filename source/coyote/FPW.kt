@@ -110,6 +110,10 @@ class FPW (val window: Window): AutoCloseable
 		)
 	}
 
+	val miana_joy by lazy {
+		SPRITEZ.loadSprite(ResourceLocation.of("miana joy"))
+	}
+
 	fun init ()
 	{
 		//TODO this is really dumb and should be done Auto Magically
@@ -310,11 +314,18 @@ class FPW (val window: Window): AutoCloseable
 		}
 
 		val direction = (time).floorToInt() % 4
-		val subimg = (time * 6).floorToInt() % 4
 		drawWorldMatrix.pushMatrix {
 			scale(4f, 4f, 1f)
-			translate(64f, 64f, -4f)
-			drawSprite(miana_walk_sprites[direction], subimg, 0, 0)
+			drawWorldMatrix.pushMatrix {
+				translate(64f, 64f, -4f)
+				val subimg = (time * 6).floorToInt() % 4
+				drawSprite(miana_walk_sprites[direction], subimg, 0, 0)
+			}
+			drawWorldMatrix.pushMatrix {
+				translate(32f, 64f, -5f)
+				val subimg = (time * 8).floorToInt() % 5
+				drawSprite(miana_joy, subimg, 0, 0)
+			}
 		}
 
 		//#endregion
