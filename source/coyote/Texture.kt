@@ -5,9 +5,11 @@ import org.lwjgl.opengl.GL46C.*
 class Texture (
 	val wide: Int,
 	val tall:Int,
-	val handle:Int,
+	handle:Int,
 )
 {
+	var handle: Int = handle
+
 	fun uploadImage (pic: NativeImage)
 	{
 		nglTextureSubImage2D(

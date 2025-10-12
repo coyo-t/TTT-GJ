@@ -1,6 +1,7 @@
 package coyote
 
 import coyote.resource.ResourceLocation
+import coyote.window.Window
 import coyote.window.WindowHint
 import coyote.window.WindowManager
 import org.joml.Math.lerp
@@ -16,9 +17,9 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-class FPW: AutoCloseable
+class FPW (val window: Window): AutoCloseable
 {
-	val windowSize = Vector2i(650, 450)
+	val windowSize = window.getSize(Vector2i())
 	val pevWindowSize = Vector2i(windowSize)
 	val pevMouseCo = Vector2d()
 	val curMouseCo = Vector2d()
@@ -41,29 +42,6 @@ class FPW: AutoCloseable
 	}
 
 	private var firstFrame = true
-
-	val window = with(WindowManager) {
-		hint(WindowHint.Defaults)
-		hint(WindowHint.MajorContextVersion, 4)
-		hint(WindowHint.MinorContextVersion, 6)
-		hint(WindowHint.OpenGLProfile, GLFW_OPENGL_CORE_PROFILE)
-
-		getVideoMode(primaryMonitor)?.let { l ->
-			val w = l.width()
-			val h = l.height()
-			hint(WindowHint.LocationX, (w - windowSize.x) / 2)
-			hint(WindowHint.LocationY, (h - windowSize.y) / 2)
-		}
-
-		hint(WindowHint.Resizable, true)
-		hint(WindowHint.Visible, false)
-		createWindow("MACHINE WITNESS", windowSize).also {
-			it.setSizeLimits(
-				minSize = 320 to 240,
-				maxSize = null,
-			)
-		}
-	}
 	private val TV_TRANSFORM = Matrix4f().apply {
 		translate(0f, 1.16987f, 2.98253f)
 		rotateY(180.0.toRadiansf())
@@ -85,71 +63,35 @@ class FPW: AutoCloseable
 
 	val modsz = ModelManager(RESOURCES)
 
-	val model_PlayerSpace by lazy {
-//		modsz.loadWavefront(RESOURCES[ResourceLocation.of("mesh/player space.obj")]!!)
-		modsz.loadModel(ResourceLocation.of("model/player space.lua"))
+	val model_PlayerSpace = modsz.loadModel(ResourceLocation.of("model/player space.lua"))
+
+	val shaderTest_uniformBlocks = SHADERZ[ResourceLocation.of("shader/test.lua")]
+	val shaderTest_storedOBJ = SHADERZ[ResourceLocation.of("shader/mesh test.lua")]
+
+	val textureTest_screenTri = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
+	val testSavedModel = MESHEZ[ResourceLocation.of("mesh/octmeshprev.obj")]
+	val model_Crosby = modsz.loadModel(ResourceLocation.of("model/crosby.lua"))
+	val model_DingusMachine = modsz.loadModel(ResourceLocation.of("model/dingus machine.lua"))
+
+	val model_TV = modsz.loadModel(ResourceLocation.of("model/tv.lua"))
+
+	val model_TVScreenOff = modsz.loadModel(ResourceLocation.of("model/tv screen off.lua"))
+
+	val testRenderTargetTexture = TEXTUREZ.createTexture(256, 256).apply {
+		setFilter(GL_LINEAR, GL_LINEAR)
+	}
+	val testSurface = drawCreateSurface().apply {
+		setColorAttachment(testRenderTargetTexture)
+		setDepthAttachment(256, 256)
 	}
 
-	val shaderTest_uniformBlocks by lazy {
-		SHADERZ[ResourceLocation.of("shader/test.lua")]
-	}
-	val shaderTest_storedOBJ by lazy {
-		SHADERZ[ResourceLocation.of("shader/mesh test.lua")]
-	}
-	val shader_Crosby by lazy {
-		SHADERZ[ResourceLocation.of("shader/crosby.lua")]
-	}
-
-	val textureTest_screenTri by lazy {
-		TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
-	}
-	val testSavedModel by lazy {
-		MESHEZ[ResourceLocation.of("mesh/octmeshprev.obj")]
-	}
-	val model_Crosby by lazy {
-		modsz.loadModel(ResourceLocation.of("model/crosby.lua"))
-	}
-	val model_DingusMachine by lazy {
-		modsz.loadModel(ResourceLocation.of("model/dingus machine.lua"))
-	}
-
-	val model_TV by lazy {
-		modsz.loadModel(ResourceLocation.of("model/tv.lua"))
-	}
-
-	val model_TVScreenOff by lazy {
-		modsz.loadModel(ResourceLocation.of("model/tv screen off.lua"))
-	}
-
-	val testRenderTargetTexture by lazy {
-		TEXTUREZ.createTexture(256, 256).apply {
-			setFilter(GL_LINEAR, GL_LINEAR)
-		}
-	}
-	val testSurface by lazy {
-		drawCreateSurface().apply {
-			setColorAttachment(testRenderTargetTexture)
-			setDepthAttachment(256, 256)
-		}
-	}
-
-	val rtTexDisplayTestUhhh by lazy {
-		TEXTUREZ[ResourceLocation.of("texture/color calibration card.kra")]
-	}
-
-	val texture_Untextured by lazy {
-		TEXTUREZ[ResourceLocation.of("texture/untextured.png")]
-	}
+	val rtTexDisplayTestUhhh = TEXTUREZ[ResourceLocation.of("texture/color calibration card.kra")]
 
 	val tex_env_uhh = ResourceLocation.of("texture/env/fpw mk2 labyrinth alpha.png")
 
-	val testFont by lazy {
-		FONTZ[ResourceLocation.of("font/kfont2.lua")]
-	}
+	val testFont = FONTZ[ResourceLocation.of("font/kfont2.lua")]
 
-	val osFont by lazy {
-		FONTZ[ResourceLocation.of("font/os.lua")]
-	}
+	val osFont = FONTZ[ResourceLocation.of("font/os.lua")]
 
 	fun pushInviewIdleBob (time:Double, to: Matrix4f)
 	{
@@ -199,8 +141,6 @@ class FPW: AutoCloseable
 			}
 		}
 
-		window.makeContextCurrent()
-		drawInitialize()
 		drawSetFlag(GL_DEBUG_OUTPUT, true)
 		drawSetFlag(GL_BLEND, true)
 		drawSetDebugMessageCallback(0L, ::rendererDebugMessage)

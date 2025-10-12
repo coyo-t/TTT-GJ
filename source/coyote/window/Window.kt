@@ -1,15 +1,24 @@
 package coyote.window
 
 import org.joml.Vector2d
-import org.joml.Vector3d
+import org.joml.Vector2i
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.system.MemoryStack.stackPush
-import kotlin.use
 
 class Window(val handle: Long)
 {
 
 	val shouldClose get() = glfwWindowShouldClose(handle)
+
+	fun getSize (to: Vector2i): Vector2i
+	{
+		stackPush().use { stack ->
+			val x = stack.mallocInt(1)
+			val y = stack.mallocInt(1)
+			glfwGetWindowSize(handle, x, y)
+			return to.set(x.get(), y.get())
+		}
+	}
 
 	fun setCursorMode (to:Int)
 	{
