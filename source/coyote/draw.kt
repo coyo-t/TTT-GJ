@@ -76,6 +76,25 @@ inline fun <T> drawMesh (format: VertexFormat, pr:Int, block:(Tesselator)->T): T
 	return outs
 }
 
+fun drawSprite (spr:Sprite, imageIndex: Int, x: Number, y: Number)
+{
+	val img = spr.subImages[imageIndex] ?: return
+	drawBindTexture(0, spr.texture)
+	drawMesh(TEST_VERTEX_FORMAT, GL_TRIANGLES) { tess ->
+		val x = x.toDouble()
+		val y = y.toDouble()
+		val w = spr.wide.toDouble()
+		val h = spr.tall.toDouble()
+		val ir = img.second
+		val (x0,y0,x1,y1) = ir
+		tess.vertex(x,   y,   0, x0,y0)
+		tess.vertex(x+w, y,   0, x1,y0)
+		tess.vertex(x+w, y+h, 0, x1,y1)
+		tess.vertex(x,   y+h, 0, x0,y1)
+		tess.quad()
+	}
+}
+
 fun drawText (font: Font, spacing: Number, x: Number, y: Number, string: String)
 {
 	val lh = font.lineHeight

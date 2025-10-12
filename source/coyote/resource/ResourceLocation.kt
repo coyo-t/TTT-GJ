@@ -1,6 +1,6 @@
 package coyote.resource
 
-class ResourceLocation private constructor (val path: String)
+data class ResourceLocation private constructor (val path: String)
 {
 
 	override fun toString(): String

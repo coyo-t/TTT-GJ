@@ -1,6 +1,7 @@
 package coyote
 
 import coyote.lua.LuaCoyote
+import coyote.lua.asInteger
 import coyote.lua.asString
 import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
@@ -22,39 +23,56 @@ object SPRITEZ {
 	{
 		val outs = LuaCoyote()
 		outs.openLibraries()
-		outs.push { L ->
-			L.pushValue(1)
-			val args = L.get()
-			val sprName = ResourceLocation.of(args["name"].asString()!!)
-			println(sprName)
-			0
-		}
+		outs.push(::addSprite)
 		outs.setGlobal("add_sprite")
 		return outs
 	}
 
+	private val workingSprites = mutableListOf<Sprite>()
 
+	private fun addSprite (L: Lua): Int
+	{
+		L.pushValue(1)
+		val args = L.get()
+		val sprName = ResourceLocation.of(args["name"].asString()!!)
+		val sprPage = ResourceLocation.of(args["source"].asString()!!)
+		val pSprSize = args["size"] as LuaTableValue
+		val sprWide = pSprSize[1].asInteger().toInt()
+		val sprTall = pSprSize[2].asInteger().toInt()
+
+		val pSubImages = args["sub_images"] as LuaTableValue
+		val subImages = pSubImages.map { (i,v) ->
+			val fuck = v as LuaTableValue
+			val p = fuck["co"] as LuaTableValue
+			Sprite.SubImage(
+				index = i.toInteger().toInt(),
+				x = p[1].asInteger().toInt(),
+				y = p[2].asInteger().toInt(),
+			)
+		}
+		workingSprites += Sprite(sprName, sprPage, sprWide, sprTall, subImages)
+		return 0
+	}
+
+	fun loadAllSprites (inWhat: ResourceLocation)
+	{
+		workingSprites.clear()
+		createLua().use { L ->
+			val res = requireNotNull(RESOURCES[inWhat]).readText()
+			L.run(res)
+			for (spr in workingSprites)
+			{
+				sprites[spr.name] = spr
+			}
+		}
+	}
 
 	fun loadSprite (name: ResourceLocation): Sprite
 	{
-		if (name in sprites)
-			return sprites.getValue(name)
-		var L: LuaCoyote? = null
-
-		try
-		{
-			L = createLua()
-			val res = requireNotNull(RESOURCES[name]).readText()
-			val uhh = L.run(res)
-
+		val FUCKUFCKFUCKUFKC = sprites.get(name)
+		return checkNotNull(FUCKUFCKFUCKUFKC) {
+			"ow. no sprite '$name'"
 		}
-		finally
-		{
-			L?.close()
-		}
-
-
-		TODO()
 	}
 
 

@@ -92,32 +92,33 @@ class FPW (val window: Window): AutoCloseable
 
 	val osFont = FONTZ[ResourceLocation.of("font/os.lua")]
 
-	fun pushInviewIdleBob (time:Double, to: Matrix4f)
-	{
-		var pfac = 0.4
-		pfac *= pfac
+	val miana_idle_sprites by lazy {
+		listOf(
+			SPRITEZ.loadSprite(ResourceLocation.of("miana idle towards north")),
+			SPRITEZ.loadSprite(ResourceLocation.of("miana idle towards east")),
+			SPRITEZ.loadSprite(ResourceLocation.of("miana idle towards south")),
+			SPRITEZ.loadSprite(ResourceLocation.of("miana idle towards west")),
+		)
+	}
 
-		val t = time * Math.PI
-
-		val bobx = ((sin(t * .9)  * (.05 + pfac * .5)) + (1.25 * pfac)).toRadians()
-		val boby = ((cos(t * .45) * (.1 + pfac * 1.8))).toRadians()
-
-		with (to)
-		{
-			mapXnZY()
-			rotateX(bobx.toFloat())
-			rotateY(boby.toFloat())
-			rotateZ(-boby.toFloat() * 2)
-			mapXZnY()
-		}
-
-//		mats.push(matrix_build(0, 0, 0, bobx,boby,-boby * 2., 1,1,1))
-
+	val miana_walk_sprites by lazy {
+		listOf(
+			SPRITEZ.loadSprite(ResourceLocation.of("miana walk towards north")),
+			SPRITEZ.loadSprite(ResourceLocation.of("miana walk towards east")),
+			SPRITEZ.loadSprite(ResourceLocation.of("miana walk towards south")),
+			SPRITEZ.loadSprite(ResourceLocation.of("miana walk towards west")),
+		)
 	}
 
 	fun init ()
 	{
-		SPRITEZ.loadSprite(ResourceLocation.of("sprite/miana.lua"))
+		//TODO this is really dumb and should be done Auto Magically
+		val spritesToLoad = listOf(
+			"miana.lua",
+		)
+		spritesToLoad.forEach {
+			SPRITEZ.loadAllSprites(ResourceLocation.of("sprite/$it"))
+		}
 
 		window.setRawMouseMotion(true)
 		glfwSetWindowSizeCallback(window.handle) { _, w, h ->
@@ -148,6 +149,29 @@ class FPW (val window: Window): AutoCloseable
 		drawSetDepthCompareFunc(GL_LESS)
 		drawSetCullingSide(GL_BACK)
 		drawSetCullingEnabled(true)
+	}
+
+	fun pushInviewIdleBob (time:Double, to: Matrix4f)
+	{
+		var pfac = 0.4
+		pfac *= pfac
+
+		val t = time * Math.PI
+
+		val bobx = ((sin(t * .9)  * (.05 + pfac * .5)) + (1.25 * pfac)).toRadians()
+		val boby = ((cos(t * .45) * (.1 + pfac * 1.8))).toRadians()
+
+		with (to)
+		{
+			mapXnZY()
+			rotateX(bobx.toFloat())
+			rotateY(boby.toFloat())
+			rotateZ(-boby.toFloat() * 2)
+			mapXZnY()
+		}
+
+//		mats.push(matrix_build(0, 0, 0, bobx,boby,-boby * 2., 1,1,1))
+
 	}
 
 	fun draw ()
@@ -257,27 +281,41 @@ class FPW (val window: Window): AutoCloseable
 			identity()
 			ortho(0f, windowSize.x.toFloat(), windowSize.y.toFloat(), 0f, 0f, 10f)
 		}
+		with (drawViewMatrix)
+		{
+			identity()
+			val ss = screenScalar.scale.toFloat()
+			scale(ss, ss, 1f)
+		}
 
 		drawSetBlendMode(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-		drawWorldMatrix.pushMatrix().scale(screenScalar.scale.toFloat())
 		drawSetShader(shaderTest_uniformBlocks)
-		drawText(
-			osFont,
-			0, 0,
-			0,
-			arrayOf(
-				"So like this one time i ate a #YWhole Ant!#1",
-				"#HI don't know what an ant is #G#_1:3#_0",
-				"#_1#1this has 1 #CWhole Unit#1 of spacing now.",
-				"The #Ofirst 2 l1nez had no spacing#1. I kind of like it, but it looks bad with punctuation >.>\"",
-				"Yes, I added an #R#_3Entire Fucking Command#_1#1 for this :]",
-				"also, #Ydingus mcgee#1 over here forgot the [], {}, AND () characters!!",
-				"#H(this caused an Infinite Loop -.- )#0",
-				"#T1 SW34R TO GOD 3V3RY T1M3 1 4DD ON3 OF MY FUNNY 4SC11 F4C3S 1 F1ND 1 FORGOT 4NOTH3R SYMBOL!!!#1"
-			).joinToString("\n")
-		)
-		drawWorldMatrix.popMatrix()
+		drawWorldMatrix.pushMatrix {
+			drawText(
+				osFont,
+				0, 0,
+				0,
+				arrayOf(
+					"So like this one time i ate a #YWhole Ant!#1",
+					"#HI don't know what an ant is #G#_1:3#_0",
+					"#_1#1this has 1 #CWhole Unit#1 of spacing now.",
+					"The #Ofirst 2 l1nez had no spacing#1. I kind of like it, but it looks bad with punctuation >.>\"",
+					"Yes, I added an #R#_3Entire Fucking Command#_1#1 for this :]",
+					"also, #Ydingus mcgee#1 over here forgot the [], {}, AND () characters!!",
+					"#H(this caused an Infinite Loop -.- )#0",
+					"#T1 SW34R TO GOD 3V3RY T1M3 1 4DD ON3 OF MY FUNNY 4SC11 F4C3S 1 F1ND 1 FORGOT 4NOTH3R SYMBOL!!!#1"
+				).joinToString("\n")
+			)
+		}
+
+		val direction = (time).floorToInt() % 4
+		val subimg = (time * 6).floorToInt() % 4
+		drawWorldMatrix.pushMatrix {
+			scale(4f, 4f, 1f)
+			translate(64f, 64f, -4f)
+			drawSprite(miana_walk_sprites[direction], subimg, 0, 0)
+		}
 
 		//#endregion
 

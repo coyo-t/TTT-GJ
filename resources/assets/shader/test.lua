@@ -41,7 +41,12 @@ return {
 
 		void main ()
 		{
-			pixel = texture(gm_BaseTexture, v_v.texture) * v_v.color;
+			vec4 uhh = texture(gm_BaseTexture, v_v.texture) * v_v.color;
+			if (uhh.a < 0.5)
+			{
+				discard;
+			}
+			pixel = uhh;
 		}
 	]]
 }

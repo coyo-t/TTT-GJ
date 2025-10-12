@@ -7,11 +7,11 @@ local page = 'texture/sprite/miana walk.png'
 
 local function sprr (x, d)
 	local subs = {}
-	local sprx = x * CW
+	local sprx = x * 16
 	for i=0, 3 do
 		subs[i] = {
 			blank = false,
-			patch = { sprx, i*CH },
+			co = { sprx, i*CH },
 		}
 	end
 

@@ -13,6 +13,8 @@ class ResourceManager (root: Path)
 
 	private val nametable = mutableMapOf<ResourceLocation, Optional<Resource>>()
 
+
+
 	operator fun get (r: ResourceLocation): Resource?
 	{
 		if (r in nametable)
