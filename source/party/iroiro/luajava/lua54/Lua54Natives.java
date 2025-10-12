@@ -137,6 +137,17 @@ public class Lua54Natives implements LuaNatives
 		{
 			if (loaded.get() != null) {return;}
 			loaded.set(">:/");
+			try
+			{
+				if (initBindings() != 0)
+				{
+					throw new RuntimeException("Unable to init bindings");
+				}
+			}
+			catch (Throwable e)
+			{
+				throw new IllegalStateException(e);
+			}
 //			try
 //			{
 //				GlobalLibraryLoader.register(Lua54Natives.class, false);

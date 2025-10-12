@@ -1,9 +1,11 @@
 package coyote
 
 import coyote.lua.LuaCoyote
+import coyote.lua.asString
 import coyote.ren.CompiledShaders
 import coyote.resource.ResourceLocation
 import coyote.resource.ResourceManager
+import party.iroiro.luajava.Lua
 import party.iroiro.luajava.value.LuaTableValue
 import java.io.InputStreamReader
 
@@ -11,6 +13,52 @@ val RESOURCES = ResourceManager(ASSETS_PATH)
 val SHADERZ = CompiledShaders(RESOURCES)
 val TEXTUREZ = TextureManager(RESOURCES)
 val MESHEZ = OBJModelManager(RESOURCES)
+val MODELZ = ModelManager(RESOURCES)
+
+object SPRITEZ {
+	private val sprites = mutableMapOf<ResourceLocation, Sprite>()
+
+	private fun createLua (): LuaCoyote
+	{
+		val outs = LuaCoyote()
+		outs.openLibraries()
+		outs.push { L ->
+			L.pushValue(1)
+			val args = L.get()
+			val sprName = ResourceLocation.of(args["name"].asString()!!)
+			println(sprName)
+			0
+		}
+		outs.setGlobal("add_sprite")
+		return outs
+	}
+
+
+
+	fun loadSprite (name: ResourceLocation): Sprite
+	{
+		if (name in sprites)
+			return sprites.getValue(name)
+		var L: LuaCoyote? = null
+
+		try
+		{
+			L = createLua()
+			val res = requireNotNull(RESOURCES[name]).readText()
+			val uhh = L.run(res)
+
+		}
+		finally
+		{
+			L?.close()
+		}
+
+
+		TODO()
+	}
+
+
+}
 
 object FONTZ {
 	val FZ = mutableMapOf<ResourceLocation, Font>()

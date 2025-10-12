@@ -2,7 +2,6 @@ package coyote
 
 import coyote.resource.ResourceLocation
 import coyote.window.Window
-import coyote.window.WindowHint
 import coyote.window.WindowManager
 import org.joml.Math.lerp
 import org.joml.Matrix4f
@@ -61,21 +60,21 @@ class FPW (val window: Window): AutoCloseable
 			window.setCursorMode(GLFW_CURSOR_NORMAL)
 	}
 
-	val modsz = ModelManager(RESOURCES)
 
-	val model_PlayerSpace = modsz.loadModel(ResourceLocation.of("model/player space.lua"))
+
+	val model_PlayerSpace = MODELZ.loadModel(ResourceLocation.of("model/player space.lua"))
 
 	val shaderTest_uniformBlocks = SHADERZ[ResourceLocation.of("shader/test.lua")]
 	val shaderTest_storedOBJ = SHADERZ[ResourceLocation.of("shader/mesh test.lua")]
 
 	val textureTest_screenTri = TEXTUREZ[ResourceLocation.of("texture/screen triangle test.kra")]
 	val testSavedModel = MESHEZ[ResourceLocation.of("mesh/octmeshprev.obj")]
-	val model_Crosby = modsz.loadModel(ResourceLocation.of("model/crosby.lua"))
-	val model_DingusMachine = modsz.loadModel(ResourceLocation.of("model/dingus machine.lua"))
+	val model_Crosby = MODELZ.loadModel(ResourceLocation.of("model/crosby.lua"))
+	val model_DingusMachine = MODELZ.loadModel(ResourceLocation.of("model/dingus machine.lua"))
 
-	val model_TV = modsz.loadModel(ResourceLocation.of("model/tv.lua"))
+	val model_TV = MODELZ.loadModel(ResourceLocation.of("model/tv.lua"))
 
-	val model_TVScreenOff = modsz.loadModel(ResourceLocation.of("model/tv screen off.lua"))
+	val model_TVScreenOff = MODELZ.loadModel(ResourceLocation.of("model/tv screen off.lua"))
 
 	val testRenderTargetTexture = TEXTUREZ.createTexture(256, 256).apply {
 		setFilter(GL_LINEAR, GL_LINEAR)
@@ -118,6 +117,8 @@ class FPW (val window: Window): AutoCloseable
 
 	fun init ()
 	{
+		SPRITEZ.loadSprite(ResourceLocation.of("sprite/miana.lua"))
+
 		window.setRawMouseMotion(true)
 		glfwSetWindowSizeCallback(window.handle) { _, w, h ->
 			windowSize.set(w, h)
@@ -231,17 +232,17 @@ class FPW (val window: Window): AutoCloseable
 			translate(0f, 0f, 0f)
 		}
 
-		model_PlayerSpace.draw(TEXTUREZ, SHADERZ)
+		model_PlayerSpace.draw()
 		drawWorldMatrix.pushMatrix {
 			translate(0f, 0.985588f, -3f)
-			model_DingusMachine.draw(TEXTUREZ, SHADERZ)
+			model_DingusMachine.draw()
 		}
 		drawWorldMatrix.pushMatrix {
 			mul(TV_TRANSFORM)
-			model_TV.draw(TEXTUREZ, SHADERZ)
-			model_TVScreenOff.draw(TEXTUREZ, SHADERZ)
+			model_TV.draw()
+			model_TVScreenOff.draw()
 		}
-		model_Crosby.draw(TEXTUREZ, SHADERZ)
+		model_Crosby.draw()
 
 
 		//#endregion

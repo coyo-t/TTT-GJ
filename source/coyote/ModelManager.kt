@@ -101,8 +101,10 @@ class ModelManager (val resourceManager: ResourceManager)
 		val materialTextures = arrayOfNulls<List<Pair<Int, Texture>>>(materials.size)
 		val materialShaders = arrayOfNulls<CompiledShaders.ShaderPipeline>(materials.size)
 
-		fun draw (textureManager: TextureManager, shaderManager: CompiledShaders)
+		fun draw ()
 		{
+			val textureManager = TEXTUREZ
+			val shaderManager = SHADERZ
 			for (mesh in meshes)
 			{
 				val mdef = requireNotNull(materials[mesh]) {

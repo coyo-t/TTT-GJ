@@ -5,11 +5,12 @@ local CH = 24
 local SIZE = { CW, CH }
 local page = 'texture/sprite/miana walk.png'
 
-local function sprr (d, x)
+local function sprr (x, d)
 	local subs = {}
 	local sprx = x * CW
 	for i=0, 3 do
 		subs[i] = {
+			blank = false,
 			patch = { sprx, i*CH },
 		}
 	end
